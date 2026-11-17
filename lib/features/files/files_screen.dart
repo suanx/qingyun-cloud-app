@@ -43,7 +43,7 @@ class _FilesScreenState extends State<FilesScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final categories = FileCategory.values;
+    const categories = FileCategory.values;
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

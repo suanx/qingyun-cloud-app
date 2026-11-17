@@ -59,7 +59,7 @@ class _TrashScreenState extends State<TrashScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator(color: QyColors.primaryDeep))
             : _files.isEmpty
-                ? QyEmptyState(
+                ? const QyEmptyState(
                     icon: QyIcons.trash,
                     title: '回收站是空的',
                     description: '删除的文件会在这里保留 30 天',

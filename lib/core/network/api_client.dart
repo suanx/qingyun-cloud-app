@@ -59,7 +59,8 @@ class ApiClient {
   }
 
   /// 直接暴露原始请求能力（文件上传等场景）。
-  Future<Response<T>> raw<T>(Future<Response<T>> Function(Dio dio) send) => _guard(send);
+  Future<Response<T>> raw<T>(Future<Response<T>> Function(Dio dio) send) =>
+      _guard(() => send(_dio));
 
   Future<Response<T>> _guard<T>(Future<Response<T>> Function() send) async {
     try {
@@ -91,6 +92,7 @@ class ApiClient {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
+      case DioExceptionType.transformTimeout:
         return ApiException.timeout();
       case DioExceptionType.cancel:
         return ApiException.cancelled();

@@ -84,15 +84,15 @@ class _SearchScreenState extends State<SearchScreen> {
               child: !_searched
                   ? Padding(
                       padding: const EdgeInsets.all(20),
-                      child: QyEmptyState(
+                      child: const QyEmptyState(
                         icon: QyIcons.search,
                         title: '输入关键词',
                         description: '支持按文件名搜索云端文件',
                       ),
                     )
                   : _results.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.all(20),
+                      ? const Padding(
+                          padding: EdgeInsets.all(20),
                           child: QyEmptyState(
                             title: '没有找到匹配的文件',
                             description: '换个关键词试试',
