@@ -69,8 +69,8 @@ git push origin v0.1.0
 
 - Flutter 版本通过 `subosito/flutter-action@v2` 固定为 `3.24.5`，保证本地与 CI 一致。
 - Android 构建先装 Temurin JDK 17，再 `flutter build apk --release`。
-- iOS 构建使用 `flutter build ipa --release --no-codesign`，产出**未签名 IPA**（无 Apple 证书也能出包，可用于归档验证；上架/TestFlight 需在具有证书的机器上重新签名）。
-- 两条构建工作流均先执行 `flutter analyze --fatal-infos` 作为质量门禁。
+- iOS 构建（`ios-build.yml`）分两步：先 `flutter build ios --release --no-codesign` 编译出未签名 `Runner.app`，再把 `Runner.app` 打包为 `Payload/*.ipa` 的未签名 IPA。仓库已包含标准 `ios/Podfile`，CI 中会显式执行 `pod install` 接入 `Flutter.framework`。
+- 两条构建工作流均先执行 `flutter analyze` 作为质量门禁。
 
 ## 4. 签名配置
 
@@ -94,7 +94,7 @@ CI 产出的是未签名 IPA。如需在 CI 直接签名（Ad Hoc / App Store）
 
 1. 导出 p12 证书与 provisioning profile，配置 Secrets：`IOS_P12_BASE64`、`IOS_P12_PASSWORD`、`IOS_PROFILE_BASE64`；
 2. 使用 `apple-actions/import-codesign-certs` 导入证书；
-3. 将 `flutter build ipa` 的 `--no-codesign` 去掉，并补充 `--export-options-plist` 或 Xcode 侧 `DEVELOPMENT_TEAM`。
+3. 构建命令去掉 `--no-codesign`（改用 `flutter build ipa --release --export-method ad-hoc` 等），并在 Xcode 侧配置 `DEVELOPMENT_TEAM`。
 
 ## 5. 字体接入（可选，还原设计稿）
 
