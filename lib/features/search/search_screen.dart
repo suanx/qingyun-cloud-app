@@ -82,9 +82,9 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             Expanded(
               child: !_searched
-                  ? Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: const QyEmptyState(
+                  ? const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: QyEmptyState(
                         icon: QyIcons.search,
                         title: '输入关键词',
                         description: '支持按文件名搜索云端文件',

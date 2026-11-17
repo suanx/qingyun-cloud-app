@@ -53,14 +53,14 @@ class CloudFile {
   final bool starred;
 
   static CloudFile fromJson(Map<String, dynamic> json) => CloudFile(
-        id: json['id'] as String,
-        name: json['name'] as String,
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '（未命名文件）',
         category: FileCategory.values.firstWhere(
-          (c) => c.name == (json['category'] as String? ?? 'other'),
+          (c) => c.name == (json['category']?.toString()),
           orElse: () => FileCategory.other,
         ),
-        sizeLabel: json['size_label'] as String? ?? '',
-        updatedLabel: json['updated_label'] as String? ?? '',
+        sizeLabel: json['size_label']?.toString() ?? '',
+        updatedLabel: json['updated_label']?.toString() ?? '',
         starred: json['starred'] as bool? ?? false,
       );
 }
@@ -79,10 +79,16 @@ class StorageSummary {
 
   String get label => '${usedGb.toStringAsFixed(1)} / ${totalGb.toStringAsFixed(0)} GB';
 
-  static StorageSummary fromJson(Map<String, dynamic> json) => StorageSummary(
-        usedGb: (json['used_gb'] as num? ?? 0).toDouble(),
-        totalGb: (json['total_gb'] as num? ?? 1).toDouble(),
-      );
+  static StorageSummary fromJson(Map<String, dynamic> json) {
+    final used = (json['used_gb'] as num? ?? 0).toDouble();
+    var total = (json['total_gb'] as num? ?? 1).toDouble();
+    // 容错：非法 total（0/负数）按 1 处理，避免除零与展示异常
+    if (total <= 0) total = 1;
+    return StorageSummary(
+      usedGb: used < 0 ? 0 : used,
+      totalGb: total,
+    );
+  }
 }
 
 /// 传输任务（传输任务场景）。
@@ -117,16 +123,16 @@ class TransferTask {
       );
 
   static TransferTask fromJson(Map<String, dynamic> json) => TransferTask(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        direction: (json['direction'] as String? ?? 'upload') == 'download'
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '（未命名任务）',
+        direction: (json['direction']?.toString() ?? 'upload') == 'download'
             ? TransferDirection.download
             : TransferDirection.upload,
         status: TransferStatus.values.firstWhere(
-          (s) => s.name == (json['status'] as String? ?? 'running'),
+          (s) => s.name == (json['status']?.toString()),
           orElse: () => TransferStatus.running,
         ),
-        progress: (json['progress'] as num? ?? 0).toDouble(),
-        sizeLabel: json['size_label'] as String? ?? '',
+        progress: ((json['progress'] as num? ?? 0).toDouble()).clamp(0.0, 1.0),
+        sizeLabel: json['size_label']?.toString() ?? '',
       );
 }

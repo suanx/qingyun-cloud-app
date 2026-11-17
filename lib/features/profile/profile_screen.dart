@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/router/app_router.dart';
+
 /// 个人中心场景。
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -54,6 +56,8 @@ class ProfileScreen extends StatelessWidget {
           QyCard(
             child: Column(
               children: <Widget>[
+                _MenuRow(icon: QyIcons.play, label: '功能演示（全量）', onTap: () => context.go(AppRouter.demo)),
+                const Divider(color: QyColors.divider, height: 1),
                 _MenuRow(icon: QyIcons.chart, label: '容量管理', onTap: () => context.go(QyRoutes.storage)),
                 const Divider(color: QyColors.divider, height: 1),
                 _MenuRow(icon: QyIcons.trash, label: '回收站', onTap: () => context.go(QyRoutes.trash)),

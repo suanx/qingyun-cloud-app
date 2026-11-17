@@ -24,26 +24,23 @@ class CloudRepository {
       if (category != FileCategory.all) 'category': category.name,
       if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
     });
-    return (data as List<dynamic>)
-        .map((e) => CloudFile.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _asList(data).map((e) => CloudFile.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<CloudFile>> trashFiles() async {
     if (AppConfig.useMockData) return MockData.trashFiles;
     final data = await _client.get(ApiEndpoints.trash);
-    return (data as List<dynamic>)
-        .map((e) => CloudFile.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _asList(data).map((e) => CloudFile.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<TransferTask>> transfers() async {
     if (AppConfig.useMockData) return MockData.transfers;
     final data = await _client.get(ApiEndpoints.transfers);
-    return (data as List<dynamic>)
-        .map((e) => TransferTask.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _asList(data).map((e) => TransferTask.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  /// 容错：后端 data 缺失或类型异常时返回空列表，避免页面崩溃。
+  static List<dynamic> _asList(Object? data) => data is List<dynamic> ? data : const <dynamic>[];
 }
 
 /// 内置示例数据：与设计稿场景一致，用于无后端时展示完整 UI。

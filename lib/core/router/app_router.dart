@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../demo/boundary_demo_screen.dart';
+import '../../demo/component_demo_screen.dart';
+import '../../demo/demo_gallery_screen.dart';
+import '../../demo/network_demo_screen.dart';
 import '../../features/files/files_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/preview/preview_screen.dart';
@@ -21,6 +25,12 @@ import '../../features/transfer/transfer_files_screen.dart';
 /// 文件列表、搜索、预览、分享、传输任务、回收站、个人中心、容量管理、
 /// 空状态与反馈，共 12 个场景）。
 abstract final class AppRouter {
+  /// 功能演示相关路由（见 lib/demo/）。
+  static const String demo = '/demo';
+  static const String demoComponents = '/demo/components';
+  static const String demoNetwork = '/demo/network';
+  static const String demoBoundary = '/demo/boundary';
+
   static final GoRouter router = GoRouter(
     initialLocation: QyRoutes.splash,
     routes: <RouteBase>[
@@ -52,6 +62,10 @@ abstract final class AppRouter {
       GoRoute(path: QyRoutes.trash, builder: (_, __) => const TrashScreen()),
       GoRoute(path: QyRoutes.storage, builder: (_, __) => const StorageScreen()),
       GoRoute(path: QyRoutes.states, builder: (_, __) => const StatesScreen()),
+      GoRoute(path: demo, builder: (_, __) => const DemoGalleryScreen()),
+      GoRoute(path: demoComponents, builder: (_, __) => const ComponentDemoScreen()),
+      GoRoute(path: demoNetwork, builder: (_, __) => const NetworkDemoScreen()),
+      GoRoute(path: demoBoundary, builder: (_, __) => const BoundaryDemoScreen()),
     ],
   );
 }

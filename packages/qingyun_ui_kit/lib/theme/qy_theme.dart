@@ -4,7 +4,7 @@ import 'qy_tokens.dart';
 import 'qy_typography.dart';
 
 ThemeData qyLightTheme() {
-  final scheme = ColorScheme.light(
+  const scheme = ColorScheme.light(
     primary: QyColors.primary,
     onPrimary: QyColors.ink,
     primaryContainer: QyColors.primaryLight,

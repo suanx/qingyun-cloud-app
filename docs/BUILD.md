@@ -28,6 +28,22 @@ flutter run -d chrome             # Web 调试（ui_kit 图标为 SVG，同样�
 
 `qingyun_ui_kit` 通过 `pubspec.yaml` 的 path 依赖引入（`packages/qingyun_ui_kit`），无需发布到 pub.dev。
 
+### 2.1 运行功能演示
+
+```bash
+flutter run
+# 启动后进入：我的 → 功能演示（全量）；或直接修改 initialLocation 为 /demo
+```
+
+演示中心（`lib/demo/`）分组覆盖全部功能：
+
+- **业务场景**：12 个设计稿场景一键直达；
+- **组件演示**（`/demo/components`）：所有 qingyun_ui_kit 组件的典型用法与边界值；
+- **网络层演示**（`/demo/network`）：App 内启动本地 HTTP 服务（dart:io HttpServer，127.0.0.1 随机端口），7 个用例完整演示 envelop 解析、鉴权头、业务失败、401、超时、404 的实际返回；
+- **边界演示**（`/demo/boundary`）：9 个同步用例验证空数据/除零/越界/非法枚举/字段缺失的容错行为。
+
+> 说明：网络演示依赖 `dart:io`，适用于 Android / iOS / 桌面端；Web 端不可用（其余页面不受影响）。
+
 ## 3. 仓库自带的三条 GitHub Actions 工作流
 
 | 工作流 | 文件 | 触发条件 | Runner | 产物 |
