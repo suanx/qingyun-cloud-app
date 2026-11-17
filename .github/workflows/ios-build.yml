@@ -30,6 +30,19 @@ jobs:
           cd ios
           pod install
 
+      - name: Debug xcconfig chain
+        run: |
+          echo '--- Runner.xcworkspace ---'
+          ls -la ios/Runner.xcworkspace/contents.xcworkspacedata || true
+          echo '--- Pods-Runner.release.xcconfig ---'
+          cat "ios/Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig" || true
+          echo '--- Generated.xcconfig ---'
+          cat ios/Flutter/Generated.xcconfig || true
+          echo '--- ephemeral ---'
+          ls -la ios/Flutter/ephemeral || true
+          echo '--- Pods/Headers/Public ---'
+          ls -la ios/Pods/Headers/Public 2>/dev/null || true
+
       - name: Analyze
         run: flutter analyze
 
