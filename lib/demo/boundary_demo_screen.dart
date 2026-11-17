@@ -42,7 +42,7 @@ class _BoundaryDemoScreenState extends State<BoundaryDemoScreen> {
   }
 
   String _caseLongText() {
-    final file = CloudFile(
+    const file = CloudFile(
       id: 'long',
       name: '这是一个非常非常非常长的文件名用于验证列表单行截断与省略号显示是否正常.docx',
       category: FileCategory.doc,

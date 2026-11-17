@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
-import '../core/models/cloud_models.dart';
-
 /// UI 组件与交互演示：覆盖 qingyun_ui_kit 全部组件的典型用法。
 class ComponentDemoScreen extends StatelessWidget {
   const ComponentDemoScreen({super.key});

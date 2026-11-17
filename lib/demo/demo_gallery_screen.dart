@@ -28,36 +28,36 @@ abstract final class DemoRegistry {
     (
       groupScenes,
       <DemoCase>[
-        DemoCase('启动页', '暖黄渐变 + 品牌标识，停顿后自动进入首页', QyRoutes.splash),
-        DemoCase('首页', '容量卡片、快捷操作、最近文件、下拉刷新', QyRoutes.home),
-        DemoCase('文件分类与列表', '分类 chips 过滤 + 文件列表 + 空状态', QyRoutes.files),
-        DemoCase('传输任务', '上传/下载任务进度、暂停/继续切换', QyRoutes.transfers),
-        DemoCase('个人中心', '用户卡片、常用功能、设置分组', QyRoutes.profile),
-        DemoCase('上传 / 下载', '发起传输并观察进度条推进', QyRoutes.transferFiles),
-        DemoCase('搜索', '关键词实时过滤，含无结果空状态', QyRoutes.search),
-        DemoCase('预览', '文件信息展示与下载入口', QyRoutes.preview),
-        DemoCase('分享与权限', '生成分享链接、下载/提取码/有效期开关', QyRoutes.share),
-        DemoCase('回收站', '已删除文件恢复与清空', QyRoutes.trash),
-        DemoCase('容量管理', '总容量进度与分类占用明细', QyRoutes.storage),
-        DemoCase('空状态与反馈', 'QyEmptyState 与成功/失败 Toast', QyRoutes.states),
+        DemoCase(title: '启动页', description: '暖黄渐变 + 品牌标识，停顿后自动进入首页', route: QyRoutes.splash),
+        DemoCase(title: '首页', description: '容量卡片、快捷操作、最近文件、下拉刷新', route: QyRoutes.home),
+        DemoCase(title: '文件分类与列表', description: '分类 chips 过滤 + 文件列表 + 空状态', route: QyRoutes.files),
+        DemoCase(title: '传输任务', description: '上传/下载任务进度、暂停/继续切换', route: QyRoutes.transfers),
+        DemoCase(title: '个人中心', description: '用户卡片、常用功能、设置分组', route: QyRoutes.profile),
+        DemoCase(title: '上传 / 下载', description: '发起传输并观察进度条推进', route: QyRoutes.transferFiles),
+        DemoCase(title: '搜索', description: '关键词实时过滤，含无结果空状态', route: QyRoutes.search),
+        DemoCase(title: '预览', description: '文件信息展示与下载入口', route: QyRoutes.preview),
+        DemoCase(title: '分享与权限', description: '生成分享链接、下载/提取码/有效期开关', route: QyRoutes.share),
+        DemoCase(title: '回收站', description: '已删除文件恢复与清空', route: QyRoutes.trash),
+        DemoCase(title: '容量管理', description: '总容量进度与分类占用明细', route: QyRoutes.storage),
+        DemoCase(title: '空状态与反馈', description: 'QyEmptyState 与成功/失败 Toast', route: QyRoutes.states),
       ],
     ),
     (
       groupComponents,
       <DemoCase>[
-        DemoCase('组件总览', 'QyButton 四态、QyCard、进度条、列表项、Toast', AppRouter.demoComponents),
+        DemoCase(title: '组件总览', description: 'QyButton 四态、QyCard、进度条、列表项、Toast', route: AppRouter.demoComponents),
       ],
     ),
     (
       groupNetwork,
       <DemoCase>[
-        DemoCase('网络层演示', '内置本地演示服务：envelop 解析、鉴权头、业务失败、401、超时、404', AppRouter.demoNetwork),
+        DemoCase(title: '网络层演示', description: '内置本地演示服务：envelop 解析、鉴权头、业务失败、401、超时、404', route: AppRouter.demoNetwork),
       ],
     ),
     (
       groupBoundary,
       <DemoCase>[
-        DemoCase('边界情况', '空数据、超长文本、除零、进度越界、非法枚举、token 清理', AppRouter.demoBoundary),
+        DemoCase(title: '边界情况', description: '空数据、超长文本、除零、进度越界、非法枚举、token 清理', route: AppRouter.demoBoundary),
       ],
     ),
   ];
