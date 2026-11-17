@@ -1,0 +1,40 @@
+name: ios-build
+
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    name: Build iOS IPA (release, unsigned)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.24.5
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      # 未签名 IPA：无需 Apple 证书即可产出，供真机自行签名或 TestFlight 前验证
+      - name: Build IPA (no codesign)
+        run: flutter build ipa --release --no-codesign
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qingyun-ios-ipa
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error

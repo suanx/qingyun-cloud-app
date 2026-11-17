@@ -1,0 +1,5 @@
+# 统一换行行为，避免 Windows 协作把 gradlew 等脚本改成 CRLF
+* text=auto eol=lf
+*.png binary
+*.jar binary
+*.jks binary
