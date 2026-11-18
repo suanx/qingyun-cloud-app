@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/models/cloud_models.dart';
 import '../../core/network/cloud_repository.dart';
 import '../../core/router/app_router.dart';
@@ -58,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: Text('轻云', style: textTheme.headlineLarge),
                 ),
+                Text(AppConfig.versionLabel, style: textTheme.labelSmall),
                 IconButton(
                   onPressed: () => context.push(QyRoutes.search),
                   icon: const QyIcon(QyIcons.search, size: 22),

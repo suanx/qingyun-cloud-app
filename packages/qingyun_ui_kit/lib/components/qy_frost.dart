@@ -13,6 +13,13 @@ import '../theme/qy_colors.dart';
 ///   高斯模糊，透出并虚化组件背后的滚动内容。仅用于 AppBar、底部导航栏、
 ///   Toast 浮层等"悬浮于内容之上"的栏体/浮层，避免大面积模糊遮挡页面内容。
 class QyFrost extends StatelessWidget {
+  /// 全局真磨砂（BackdropFilter）总开关。
+  ///
+  /// 默认关闭：部分 Android 设备的 Skia/GPU 合成存在 BackdropFilter
+  /// 模糊区域异常扩大的问题，会导致整页内容被雾化。关闭后全 App 仅保留
+  /// 玻璃面质感（半透明面 + 细描边 + 柔投影），内容 100% 清晰。
+  static bool realBlurEnabled = false;
+
   const QyFrost({
     super.key,
     required this.child,
@@ -60,7 +67,7 @@ class QyFrost extends StatelessWidget {
     if (borderRadius != BorderRadius.zero) {
       body = ClipRRect(borderRadius: borderRadius, child: body);
     }
-    if (!backdrop) {
+    if (!backdrop || !realBlurEnabled) {
       return body;
     }
     return Stack(

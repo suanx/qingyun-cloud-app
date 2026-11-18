@@ -36,6 +36,8 @@ class _SplashScreenState extends State<SplashScreen> {
               Text(AppConfig.appName, style: textTheme.displayLarge),
               const SizedBox(height: QyTokens.spaceSm),
               Text('把每一份文件，轻轻放进云里', style: textTheme.bodyMedium),
+              const SizedBox(height: QyTokens.spaceMd),
+              Text(AppConfig.versionLabel, style: textTheme.labelSmall),
             ],
           ),
         ),
