@@ -44,7 +44,7 @@ class _TransfersScreenState extends State<TransfersScreen> {
           ),
           Expanded(
             child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
+              physics: qyProtoScrollPhysics,
               padding: const EdgeInsets.only(bottom: 100),
               children: const <Widget>[
                 _TransferCard(

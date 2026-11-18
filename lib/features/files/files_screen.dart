@@ -53,7 +53,7 @@ class _FilesScreenState extends State<FilesScreen> {
               const _FolderGrid(),
               Expanded(
                 child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
+                  physics: qyProtoScrollPhysics,
                   padding: const EdgeInsets.only(bottom: 100),
                   children: const <Widget>[
                     ProtoSectionHead(

@@ -56,6 +56,8 @@
 
 - **首页**：渐变头图（168deg `#E4EEFF→#EFF4FF→#F5F7FB` + 右上薄荷径向光晕）**固定不滚动**（原型 `.hero{flex-shrink:0}`）；其下 `.scroll` 独立滚动 → 容量卡（68% 环 + 四段进度条 + 升级）→ 4 宫格快捷入口 → 最近文件横滑 4 卡 → 为你推荐回忆渐变卡。实现用 `Stack`：底层固定渐变多铺 38px，滚动区从头图内容底部开始，容量卡第一帧恰好叠进渐变尾部 38px（等价原型 `margin:-38px`），滚动时由滚动区顶部裁切，不会盖住固定头图。
 - **横向滚动行（重要约束）**：所有横滑行一律用 `SingleChildScrollView(scrollDirection: horizontal) + Row`，**禁止**「固定高度 `SizedBox` + 横向 `ListView`」。横向 ListView 会把 children 压进 viewport 高度，固定值只要比「上下 padding + 中文行高 + 描边」小 1px，中文字下半截就会被裁掉（传输页 / 全部文件页的筛选胶囊曾出现缺笔画）。`ProtoChipRow` 与首页 `_RecentRow` 均按此实现，高度由内容自然撑开。
+- **滚动回弹（重要约束）**：所有 `ListView` 一律用共享常量 `qyProtoScrollPhysics`（`proto_widgets.dart`）= `AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics())`。四个 Tab 页改成「固定头部 + `Expanded` 滚动区」后滚动区可能很矮，`AlwaysScrollable` 保证内容不足一屏也能拖；**必须带 `BouncingScrollPhysics` 父级**，由 spring 把越界内容拉回。裸的 `const AlwaysScrollableScrollPhysics()` 基类 `createBallisticSimulation` 在越界时返回 null，松手后内容停在越界位置，表现就是「滑到底 / 内容不足一屏时卡一半、不回弹」。双端统一回弹，不按平台切 Clamping（Clamping 只有拉伸光晕，不是内容归位）。预览页是固定 Column，无需 physics。
+- **底部留白**：四个 Tab 页滚动区 `bottom: 96~100`，是给 74 高底部导航预留的遮挡空间，不是多余空白；配合回弹 physics，滚到底松手会归位。
 - **卡片内元信息**：`_FileCard` 宽 126、内容宽 106，中文 + 数字 + 单位在真机字体下可能折行（`4.2 MB` 被拆成两行）；用 `FittedBox(scaleDown)` 固定单行完整显示，文件名仍用 `maxLines:1 + ellipsis`。
 - **文字行高**：热搜行 `.hot-row` 用 `padding: 11px 0` 自适应，不写死 44 高；其余固定高度仅用于纯图标 / 装饰（进度环、甜甜圈、照片块、指示点），不承载文字。
 - **固定头部（四个 Tab 页的统一约束）**：原型所有 `.nav` / `.hero` / `.me-hero` / `.chip-row` / `.folders` 等头部块均为 `flex-shrink:0`，只有 `.scroll` 滚动。四个 Tab 页一律用 `ColoredBox + Column(crossAxisAlignment: stretch)`：固定块按自然高度排在顶部，余下内容放进 `Expanded(ListView)`，并加 `AlwaysScrollableScrollPhysics` 保证内容不足时也能拖动。各页固定边界（按用户红框确认）：

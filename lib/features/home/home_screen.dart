@@ -33,7 +33,7 @@ class HomeScreen extends StatelessWidget {
               const _HeroContent(),
               Expanded(
                 child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
+                  physics: qyProtoScrollPhysics,
                   padding: const EdgeInsets.only(bottom: 96),
                   children: <Widget>[
                     _StorageCard(onTap: () => context.go(QyRoutes.storage)),

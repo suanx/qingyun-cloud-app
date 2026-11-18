@@ -23,7 +23,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 14),
           Expanded(
             child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
+              physics: qyProtoScrollPhysics,
               padding: const EdgeInsets.only(bottom: 100),
               children: <Widget>[
                 _MeBlock(

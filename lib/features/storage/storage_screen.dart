@@ -15,6 +15,7 @@ class StorageScreen extends StatelessWidget {
     return ColoredBox(
       color: QyColors.canvas,
       child: ListView(
+        physics: qyProtoScrollPhysics,
         padding: const EdgeInsets.only(bottom: 26),
         children: <Widget>[
           ProtoNav(

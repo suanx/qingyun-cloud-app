@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+/// 全 App 滚动区统一 physics。
+///
+/// - `AlwaysScrollableScrollPhysics`：内容不足一屏也能拖动（四个 Tab 页改成
+///   「固定头部 + Expanded 滚动区」后，滚动区可能很矮，必须允许 overscroll）。
+/// - `parent: BouncingScrollPhysics`：越界后由 spring 拉回原位，**双端统一回弹**。
+///
+/// 关键：裸的 `AlwaysScrollableScrollPhysics()` 没有 parent 时，基类
+/// `createBallisticSimulation` 在越界状态返回 null —— 手指拖过头松手后内容
+/// 会停在越界位置，既不回弹也不归位，表现就是「滑到底 / 内容不足一屏时卡一半」。
+/// 所以本常量必须带弹性父级，不要简写成 `const AlwaysScrollableScrollPhysics()`。
+const ScrollPhysics qyProtoScrollPhysics =
+    AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics());
+
 /// 原型文本样式常量：与 HTML 的 CSS 字号/字重一一对应。
 abstract final class ProtoText {
   static const TextStyle heroHi = TextStyle(
