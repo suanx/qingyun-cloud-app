@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/models/cloud_models.dart';
 import '../../core/network/cloud_repository.dart';
 import '../../core/router/app_router.dart';
@@ -48,7 +49,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: <Widget>[
-          Text('我的', style: textTheme.headlineLarge),
+          Row(
+            children: <Widget>[
+              Text('我的', style: textTheme.headlineLarge),
+              const Spacer(),
+              Text(AppConfig.versionLabel, style: textTheme.labelSmall),
+            ],
+          ),
           const SizedBox(height: QyTokens.spaceLg),
 
           // 用户信息卡片
@@ -126,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Divider(color: QyColors.divider, height: 1),
                 _MenuRow(icon: QyIcons.lock, hue: QyHues.teal, label: '账号与安全', onTap: () => showQyToast(context, '安全中心开发中')),
                 const Divider(color: QyColors.divider, height: 1),
-                _MenuRow(icon: QyIcons.info, hue: QyHues.green, label: '关于轻云', onTap: () => showQyToast(context, '轻云 v0.1.0')),
+                _MenuRow(icon: QyIcons.info, hue: QyHues.green, label: '关于轻云', onTap: () => showQyToast(context, '轻云 ${AppConfig.versionLabel}')),
               ],
             ),
           ),
