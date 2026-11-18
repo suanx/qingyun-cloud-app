@@ -244,14 +244,14 @@ class _CleanCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Row(
+          const Row(
             children: <Widget>[
-              const Icon(Icons.auto_awesome, size: 19, color: QyColors.mint),
-              const SizedBox(width: 9),
-              const Text('为你找到 4.6 GB 可清理',
+              Icon(Icons.auto_awesome, size: 19, color: QyColors.mint),
+              SizedBox(width: 9),
+              Text('为你找到 4.6 GB 可清理',
                   style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: QyColors.ink)),
-              const Spacer(),
-              const Text('智能整理', style: ProtoText.label105),
+              Spacer(),
+              Text('智能整理', style: ProtoText.label105),
             ],
           ),
           const SizedBox(height: 12),

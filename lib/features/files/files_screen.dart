@@ -62,7 +62,7 @@ class _FilesScreenState extends State<FilesScreen> {
                 title: '文件',
                 more: '按修改时间',
                 moreIcon: Icons.expand_more,
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+                padding: EdgeInsets.fromLTRB(18, 18, 18, 10),
               ),
               const _FileList(),
               const ProtoFootNote(

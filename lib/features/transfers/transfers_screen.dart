@@ -274,7 +274,7 @@ class _DoneList extends StatelessWidget {
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
+      child: const Column(
         children: <Widget>[
           _DoneRow(
             icon: Icons.check_circle,
