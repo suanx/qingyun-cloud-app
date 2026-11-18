@@ -10,91 +10,102 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 红框区域（渐变个人头图 + VIP 会员横幅）固定不滚动，下方三组设置卡片
+    // 与页脚单独滚动。等价原型 .me-hero / .vip-banner 的 flex-shrink:0 +
+    // .scroll flex:1；固定区末尾保留 14 间距，滚动内容不会贴死横幅。
     return ColoredBox(
       color: QyColors.canvas,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           const _MeHero(),
           _VipBanner(onTap: () => showQyToast(context, '轻云会员：2TB 空间 / 极速传输')),
           const SizedBox(height: 14),
-          _MeBlock(
-            children: <Widget>[
-              _MeCell(
-                icon: Icons.pie_chart,
-                iconColor: QyColors.primary,
-                background: QyColors.primaryLight,
-                label: '存储空间',
-                value: '174.2 / 256 GB',
-                onTap: () => context.go(QyRoutes.storage),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _MeBlock(
-            children: <Widget>[
-              _MeCell(
-                icon: Icons.share,
-                iconColor: QyColors.primary,
-                background: QyColors.primaryLight,
-                label: '我的分享',
-                onTap: () => showQyToast(context, '我的分享：6 个链接'),
-              ),
-              _MeCell(
-                icon: Icons.delete_outline,
-                iconColor: QyColors.pinkDeep,
-                background: QyColors.pinkSoft,
-                label: '回收站',
-                value: '12',
-                onTap: () => showQyToast(context, '回收站：12 个文件'),
-              ),
-              _MeCell(
-                icon: Icons.cloud_download,
-                iconColor: QyColors.mintDeep,
-                background: QyColors.mintSoft,
-                label: '离线下载',
-                value: '2 个任务',
-                onTap: () => showQyToast(context, '离线下载：2 个任务'),
-              ),
-              _MeCell(
-                icon: Icons.devices,
-                iconColor: QyColors.amberDeep,
-                background: QyColors.amberSoft,
-                label: '设备管理',
-                value: '3 台',
-                onTap: () => showQyToast(context, '设备管理：3 台设备在线'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _MeBlock(
-            children: <Widget>[
-              _MeCell(
-                icon: Icons.verified_user,
-                iconColor: QyColors.violetDeep,
-                background: QyColors.violetSoft,
-                label: '安全中心',
-                onTap: () => showQyToast(context, '安全中心'),
-              ),
-              _MeCell(
-                icon: Icons.help_outline,
-                iconColor: QyColors.sub,
-                background: QyColors.canvas,
-                label: '帮助与反馈',
-                onTap: () => showQyToast(context, '帮助与反馈'),
-              ),
-              _MeCell(
-                icon: Icons.settings,
-                iconColor: QyColors.sub,
-                background: QyColors.canvas,
-                label: '设置',
-                onTap: () => showQyToast(context, '设置'),
-              ),
-            ],
-          ),
-          const ProtoFootNote(
-            '轻云 v3.2.0 · 你的文件，随时在云上',
-            padding: EdgeInsets.fromLTRB(0, 22, 0, 10),
+          Expanded(
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 100),
+              children: <Widget>[
+                _MeBlock(
+                  children: <Widget>[
+                    _MeCell(
+                      icon: Icons.pie_chart,
+                      iconColor: QyColors.primary,
+                      background: QyColors.primaryLight,
+                      label: '存储空间',
+                      value: '174.2 / 256 GB',
+                      onTap: () => context.go(QyRoutes.storage),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _MeBlock(
+                  children: <Widget>[
+                    _MeCell(
+                      icon: Icons.share,
+                      iconColor: QyColors.primary,
+                      background: QyColors.primaryLight,
+                      label: '我的分享',
+                      onTap: () => showQyToast(context, '我的分享：6 个链接'),
+                    ),
+                    _MeCell(
+                      icon: Icons.delete_outline,
+                      iconColor: QyColors.pinkDeep,
+                      background: QyColors.pinkSoft,
+                      label: '回收站',
+                      value: '12',
+                      onTap: () => showQyToast(context, '回收站：12 个文件'),
+                    ),
+                    _MeCell(
+                      icon: Icons.cloud_download,
+                      iconColor: QyColors.mintDeep,
+                      background: QyColors.mintSoft,
+                      label: '离线下载',
+                      value: '2 个任务',
+                      onTap: () => showQyToast(context, '离线下载：2 个任务'),
+                    ),
+                    _MeCell(
+                      icon: Icons.devices,
+                      iconColor: QyColors.amberDeep,
+                      background: QyColors.amberSoft,
+                      label: '设备管理',
+                      value: '3 台',
+                      onTap: () => showQyToast(context, '设备管理：3 台设备在线'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _MeBlock(
+                  children: <Widget>[
+                    _MeCell(
+                      icon: Icons.verified_user,
+                      iconColor: QyColors.violetDeep,
+                      background: QyColors.violetSoft,
+                      label: '安全中心',
+                      onTap: () => showQyToast(context, '安全中心'),
+                    ),
+                    _MeCell(
+                      icon: Icons.help_outline,
+                      iconColor: QyColors.sub,
+                      background: QyColors.canvas,
+                      label: '帮助与反馈',
+                      onTap: () => showQyToast(context, '帮助与反馈'),
+                    ),
+                    _MeCell(
+                      icon: Icons.settings,
+                      iconColor: QyColors.sub,
+                      background: QyColors.canvas,
+                      label: '设置',
+                      onTap: () => showQyToast(context, '设置'),
+                    ),
+                  ],
+                ),
+                const ProtoFootNote(
+                  '轻云 v3.2.0 · 你的文件，随时在云上',
+                  padding: EdgeInsets.fromLTRB(0, 22, 0, 10),
+                ),
+              ],
+            ),
           ),
         ],
       ),

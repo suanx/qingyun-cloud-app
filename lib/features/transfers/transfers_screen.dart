@@ -18,10 +18,13 @@ class _TransfersScreenState extends State<TransfersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 红框区域（标题 / 副标题 / 全部暂停 + 速度卡 + 筛选胶囊）固定不滚动，
+    // 下方任务列表与「今天已完成」单独滚动。等价原型 .nav / .transfer-sum /
+    // .chip-row 的 flex-shrink:0 + .scroll flex:1。
     return ColoredBox(
       color: QyColors.canvas,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           ProtoNav(
             title: '传输',
@@ -39,52 +42,60 @@ class _TransfersScreenState extends State<TransfersScreen> {
             activeIndex: _chip,
             onChanged: (int i) => setState(() => _chip = i),
           ),
-          const _TransferCard(
-            icon: Icons.movie,
-            iconColor: QyColors.amberDeep,
-            background: QyColors.amberSoft,
-            name: '4K 风景素材.mp4',
-            meta: '上传中 · 264 MB / 386 MB',
-            control: Icons.pause,
-            progress: 0.68,
-            footLeft: '68%',
-            footSpeed: ' · 2.4 MB/s',
-            footRight: '剩余 1 分钟',
-            toast: '已暂停',
+          Expanded(
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 100),
+              children: <Widget>[
+                const _TransferCard(
+                  icon: Icons.movie,
+                  iconColor: QyColors.amberDeep,
+                  background: QyColors.amberSoft,
+                  name: '4K 风景素材.mp4',
+                  meta: '上传中 · 264 MB / 386 MB',
+                  control: Icons.pause,
+                  progress: 0.68,
+                  footLeft: '68%',
+                  footSpeed: ' · 2.4 MB/s',
+                  footRight: '剩余 1 分钟',
+                  toast: '已暂停',
+                ),
+                const _TransferCard(
+                  icon: Icons.audio_file,
+                  iconColor: QyColors.violetDeep,
+                  background: QyColors.violetSoft,
+                  name: '周会录音 11-18.m4a',
+                  meta: '上传中 · 9.2 MB / 28.6 MB',
+                  control: Icons.pause,
+                  progress: 0.32,
+                  footLeft: '32%',
+                  footSpeed: ' · 1.4 MB/s',
+                  footRight: '剩余 1 分钟',
+                  toast: '已暂停',
+                ),
+                const _TransferCard(
+                  icon: Icons.image,
+                  iconColor: QyColors.primary,
+                  background: QyColors.primaryLight,
+                  name: '设计稿-首页.psd',
+                  meta: '排队中 · 0 / 128 MB',
+                  control: Icons.close,
+                  progress: 0.02,
+                  footLeft: '等待中',
+                  footSpeed: '',
+                  footRight: '—',
+                  toast: '已取消',
+                ),
+                const ProtoSectionHead(
+                  title: '今天已完成',
+                  more: '3 项',
+                  moreIcon: Icons.chevron_right,
+                  padding: EdgeInsets.fromLTRB(18, 16, 18, 10),
+                ),
+                const _DoneList(),
+              ],
+            ),
           ),
-          const _TransferCard(
-            icon: Icons.audio_file,
-            iconColor: QyColors.violetDeep,
-            background: QyColors.violetSoft,
-            name: '周会录音 11-18.m4a',
-            meta: '上传中 · 9.2 MB / 28.6 MB',
-            control: Icons.pause,
-            progress: 0.32,
-            footLeft: '32%',
-            footSpeed: ' · 1.4 MB/s',
-            footRight: '剩余 1 分钟',
-            toast: '已暂停',
-          ),
-          const _TransferCard(
-            icon: Icons.image,
-            iconColor: QyColors.primary,
-            background: QyColors.primaryLight,
-            name: '设计稿-首页.psd',
-            meta: '排队中 · 0 / 128 MB',
-            control: Icons.close,
-            progress: 0.02,
-            footLeft: '等待中',
-            footSpeed: '',
-            footRight: '—',
-            toast: '已取消',
-          ),
-          const ProtoSectionHead(
-            title: '今天已完成',
-            more: '3 项',
-            moreIcon: Icons.chevron_right,
-            padding: EdgeInsets.fromLTRB(18, 16, 18, 10),
-          ),
-          const _DoneList(),
         ],
       ),
     );

@@ -19,12 +19,15 @@ class _FilesScreenState extends State<FilesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 红框区域（标题 / 面包屑 / 右上按钮 + 筛选胶囊 + 四个文件夹）固定不滚动，
+    // 下方「文件」列表单独滚动；FAB 仍浮在右下角。等价原型 .nav / .chip-row /
+    // .folders 的 flex-shrink:0 + .scroll flex:1。
     return ColoredBox(
       color: QyColors.canvas,
       child: Stack(
         children: <Widget>[
-          ListView(
-            padding: const EdgeInsets.only(bottom: 100),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               ProtoNav(
                 title: '全部文件',
@@ -48,16 +51,24 @@ class _FilesScreenState extends State<FilesScreen> {
                 onChanged: (int i) => setState(() => _chip = i),
               ),
               const _FolderGrid(),
-              const ProtoSectionHead(
-                title: '文件',
-                more: '按修改时间',
-                moreIcon: Icons.expand_more,
-                padding: EdgeInsets.fromLTRB(18, 18, 18, 10),
-              ),
-              const _FileList(),
-              const ProtoFootNote(
-                '已显示全部 5 个文件',
-                padding: EdgeInsets.only(top: 4, bottom: 4),
+              Expanded(
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 100),
+                  children: <Widget>[
+                    const ProtoSectionHead(
+                      title: '文件',
+                      more: '按修改时间',
+                      moreIcon: Icons.expand_more,
+                      padding: EdgeInsets.fromLTRB(18, 18, 18, 10),
+                    ),
+                    const _FileList(),
+                    const ProtoFootNote(
+                      '已显示全部 5 个文件',
+                      padding: EdgeInsets.only(top: 4, bottom: 4),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

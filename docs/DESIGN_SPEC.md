@@ -58,6 +58,12 @@
 - **横向滚动行（重要约束）**：所有横滑行一律用 `SingleChildScrollView(scrollDirection: horizontal) + Row`，**禁止**「固定高度 `SizedBox` + 横向 `ListView`」。横向 ListView 会把 children 压进 viewport 高度，固定值只要比「上下 padding + 中文行高 + 描边」小 1px，中文字下半截就会被裁掉（传输页 / 全部文件页的筛选胶囊曾出现缺笔画）。`ProtoChipRow` 与首页 `_RecentRow` 均按此实现，高度由内容自然撑开。
 - **卡片内元信息**：`_FileCard` 宽 126、内容宽 106，中文 + 数字 + 单位在真机字体下可能折行（`4.2 MB` 被拆成两行）；用 `FittedBox(scaleDown)` 固定单行完整显示，文件名仍用 `maxLines:1 + ellipsis`。
 - **文字行高**：热搜行 `.hot-row` 用 `padding: 11px 0` 自适应，不写死 44 高；其余固定高度仅用于纯图标 / 装饰（进度环、甜甜圈、照片块、指示点），不承载文字。
+- **固定头部（四个 Tab 页的统一约束）**：原型所有 `.nav` / `.hero` / `.me-hero` / `.chip-row` / `.folders` 等头部块均为 `flex-shrink:0`，只有 `.scroll` 滚动。四个 Tab 页一律用 `ColoredBox + Column(crossAxisAlignment: stretch)`：固定块按自然高度排在顶部，余下内容放进 `Expanded(ListView)`，并加 `AlwaysScrollableScrollPhysics` 保证内容不足时也能拖动。各页固定边界（按用户红框确认）：
+  - 首页：渐变头图 + 问候语 + 搜索 / 扫一扫 / 头像
+  - 全部文件：`ProtoNav` + 筛选胶囊 + **2×2 文件夹宫格**；滚动区从「文件 / 按修改时间」开始，FAB 仍 `Positioned` 在右下角
+  - 传输：`ProtoNav` + 速度渐变卡 + 三个筛选胶囊；滚动区从第一个任务卡开始
+  - 我的：渐变个人头图 + VIP 会员横幅 + 14 间距；滚动区从「存储空间」卡开始
+  - 独立页（搜索 / 容量 / 预览 / 相册）仍为整页滚动，未改
 - **文件页**：面包屑导航 → 5 个筛选胶囊 → 2×2 文件夹宫格 → 5 行文件列表 → 右下 54 渐变 FAB
 - **传输页**：速度渐变条 → 3 个筛选胶囊 → 3 个进行中任务（渐变进度）→ 今天已完成 3 项
 - **我的**：渐变个人头图（大头像 + VIP 标签 + 三组统计）→ 深色 VIP 横幅 → 三组设置卡片 → 页脚
