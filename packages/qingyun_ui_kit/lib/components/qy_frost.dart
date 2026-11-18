@@ -15,10 +15,12 @@ import '../theme/qy_colors.dart';
 class QyFrost extends StatelessWidget {
   /// 全局真磨砂（BackdropFilter）总开关。
   ///
-  /// 默认关闭：部分 Android 设备的 Skia/GPU 合成存在 BackdropFilter
-  /// 模糊区域异常扩大的问题，会导致整页内容被雾化。关闭后全 App 仅保留
-  /// 玻璃面质感（半透明面 + 细描边 + 柔投影），内容 100% 清晰。
-  static bool realBlurEnabled = false;
+  /// 默认开启，按原设计范围生效：仅 AppBar / 底部导航 / Toast 三类
+  /// 悬浮栏体使用真磨砂；承载内容的卡片、面板、列表项始终为玻璃面模式，
+  /// 不会出现整片区域被磨砂覆盖的效果。
+  /// 真磨砂层统一包裹 [RepaintBoundary]，将背景采样隔离在独立图层内，
+  /// 规避部分设备 BackdropFilter 模糊区域异常扩大导致整页雾化的问题。
+  static bool realBlurEnabled = true;
 
   const QyFrost({
     super.key,
@@ -70,16 +72,20 @@ class QyFrost extends StatelessWidget {
     if (!backdrop || !realBlurEnabled) {
       return body;
     }
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-            child: const SizedBox.expand(),
+    // RepaintBoundary：把真磨砂层的背景采样限制在独立重绘边界内，
+    // 防止模糊效果泄漏到整个页面（部分机型的合成器兼容性问题）。
+    return RepaintBoundary(
+      child: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+              child: const SizedBox.expand(),
+            ),
           ),
-        ),
-        body,
-      ],
+          body,
+        ],
+      ),
     );
   }
 }

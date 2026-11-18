@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
@@ -75,17 +77,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: QyTokens.spaceXl),
 
             // 卡片式功能入口：相册 / 文件 / 视频 / 同步 / 分类（彩色图标）
-            const QyCard(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-              child: Row(
-                children: <Widget>[
-                  _HomeEntry(icon: QyIcons.image, hue: QyHues.blue, label: '相册', route: AppRouter.gallery),
-                  _HomeEntry(icon: QyIcons.folder, hue: QyHues.gold, label: '文件', route: AppRouter.allFiles),
-                  _HomeEntry(icon: QyIcons.video, hue: QyHues.purple, label: '视频', route: AppRouter.videos),
-                  _HomeEntry(icon: QyIcons.refresh, hue: QyHues.teal, label: '同步', route: QyRoutes.transferFiles),
-                  _HomeEntry(icon: QyIcons.grid, hue: QyHues.orange, label: '分类', route: QyRoutes.storage),
-                ],
-              ),
+            // 卡片式功能入口幻灯片：上下导航箭头 + 垂直翻页
+            QyCard(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: _EntryCarousel(),
             ),
             const SizedBox(height: QyTokens.spaceXl),
 
@@ -164,6 +159,147 @@ class _HomeEntry extends StatelessWidget {
               Text(label, style: Theme.of(context).textTheme.labelMedium),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 首页功能入口幻灯片：垂直翻页 + 上/下两个导航箭头。
+///
+/// 第一页为五大核心入口（相册/文件/视频/同步/分类）；
+/// 第二页为更多已有功能入口（回收站/容量管理/搜索/消息），不新增功能。
+/// 上方箭头：小尺寸，处于第一页时置灰且不可点击；
+/// 下方箭头：大尺寸，处于末页时置灰且不可点击。
+class _EntryCarousel extends StatefulWidget {
+  const _EntryCarousel();
+
+  @override
+  State<_EntryCarousel> createState() => _EntryCarouselState();
+}
+
+class _EntryCarouselState extends State<_EntryCarousel> {
+  final PageController _controller = PageController();
+  int _page = 0;
+
+  static const int _pageCount = 2;
+
+  void _go(int delta) {
+    final int target = (_page + delta).clamp(0, _pageCount - 1);
+    _controller.animateToPage(
+      target,
+      duration: QyTokens.shortMotion,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Center(
+          child: _ArrowButton(
+            size: 28,
+            iconSize: 16,
+            up: true,
+            enabled: _page > 0,
+            onTap: () => _go(-1),
+          ),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 88,
+          child: PageView(
+            controller: _controller,
+            scrollDirection: Axis.vertical,
+            onPageChanged: (int page) => setState(() => _page = page),
+            children: const <Widget>[
+              _EntryPage(entries: <_HomeEntry>[
+                _HomeEntry(icon: QyIcons.image, hue: QyHues.blue, label: '相册', route: AppRouter.gallery),
+                _HomeEntry(icon: QyIcons.folder, hue: QyHues.gold, label: '文件', route: AppRouter.allFiles),
+                _HomeEntry(icon: QyIcons.video, hue: QyHues.purple, label: '视频', route: AppRouter.videos),
+                _HomeEntry(icon: QyIcons.refresh, hue: QyHues.teal, label: '同步', route: QyRoutes.transferFiles),
+                _HomeEntry(icon: QyIcons.grid, hue: QyHues.orange, label: '分类', route: QyRoutes.storage),
+              ]),
+              _EntryPage(entries: <_HomeEntry>[
+                _HomeEntry(icon: QyIcons.trash, hue: QyHues.coral, label: '回收站', route: QyRoutes.trash),
+                _HomeEntry(icon: QyIcons.chart, hue: QyHues.slate, label: '容量管理', route: QyRoutes.storage),
+                _HomeEntry(icon: QyIcons.search, hue: QyHues.blue, label: '搜索', route: QyRoutes.search),
+                _HomeEntry(icon: QyIcons.bell, hue: QyHues.green, label: '消息', route: QyRoutes.states),
+              ]),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Center(
+          child: _ArrowButton(
+            size: 46,
+            iconSize: 24,
+            up: false,
+            enabled: _page < _pageCount - 1,
+            onTap: () => _go(1),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 幻灯片单页：一行均分的功能入口。
+class _EntryPage extends StatelessWidget {
+  const _EntryPage({required this.entries});
+
+  final List<_HomeEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: entries);
+  }
+}
+
+/// 幻灯片导航箭头按钮：玻璃面圆形按钮。
+///
+/// [up] 为 true 时显示向上箭头（小尺寸），false 为向下箭头（大尺寸）；
+/// [enabled] 为 false 时置灰且不可点击。
+class _ArrowButton extends StatelessWidget {
+  const _ArrowButton({
+    required this.size,
+    required this.iconSize,
+    required this.up,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final double size;
+  final double iconSize;
+  final bool up;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fg = enabled ? QyColors.primary : QyColors.muted;
+    // QyIcons.back 为左箭头：顺时针旋转 90° 得向上箭头，逆时针 90° 得向下箭头。
+    final Widget icon = Transform.rotate(
+      angle: (up ? 90 : -90) * math.pi / 180,
+      child: QyIcon(QyIcons.back, size: iconSize, color: fg),
+    );
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(size / 2),
+      child: QyFrost(
+        color: enabled ? QyColors.frost : QyColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(size / 2),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Center(child: icon),
         ),
       ),
     );
