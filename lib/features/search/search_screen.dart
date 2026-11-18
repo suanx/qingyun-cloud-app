@@ -226,8 +226,8 @@ class _HotRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: QyTapScale(
         onTap: onTap,
-        child: SizedBox(
-          height: 44,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 11),
           child: Row(
             children: <Widget>[
               SizedBox(

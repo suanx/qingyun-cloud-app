@@ -12,33 +12,47 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 头图（渐变 + 问候语 + 右上角按钮）固定不滚动，下方内容区单独滚动。
+    // 滚动区从「头图内容底部」开始，渐变底层多铺 38px：容量卡的第一帧正好
+    // 叠进渐变尾部 38px，与原型 margin:-38px 一致；滚动时内容被滚动区顶部
+    // 边界裁掉，不会盖到固定头图上。
     return ColoredBox(
       color: QyColors.canvas,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 96),
+      child: Stack(
         children: <Widget>[
-          const _Hero(),
-          // 容量卡上移 38 叠进头图，后续内容整体跟随，保持块间相对间距。
-          Transform.translate(
-            offset: const Offset(0, -38),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                _StorageCard(onTap: () => context.go(QyRoutes.storage)),
-                const _QuickGrid(),
-                ProtoSectionHead(
-                  title: '最近文件',
-                  more: '全部',
-                  onMore: () => context.go(QyRoutes.files),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 160,
+            child: _HeroBackground(),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              const _HeroContent(),
+              Expanded(
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 96),
+                  children: <Widget>[
+                    _StorageCard(onTap: () => context.go(QyRoutes.storage)),
+                    const _QuickGrid(),
+                    ProtoSectionHead(
+                      title: '最近文件',
+                      more: '全部',
+                      onMore: () => context.go(QyRoutes.files),
+                    ),
+                    _RecentRow(onTap: () => context.go(QyRoutes.preview)),
+                    const ProtoSectionHead(
+                      title: '为你推荐',
+                      padding: EdgeInsets.fromLTRB(18, 20, 18, 2),
+                    ),
+                    _MemoryCard(onTap: () => context.go(QyRoutes.album)),
+                  ],
                 ),
-                _RecentRow(onTap: () => context.go(QyRoutes.preview)),
-                const ProtoSectionHead(
-                  title: '为你推荐',
-                  padding: EdgeInsets.fromLTRB(18, 20, 18, 2),
-                ),
-                _MemoryCard(onTap: () => context.go(QyRoutes.album)),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -46,9 +60,10 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-/// 渐变头图：168deg #E4EEFF → #EFF4FF 58% → #F5F7FB，右上薄荷径向光晕。
-class _Hero extends StatelessWidget {
-  const _Hero();
+/// 固定渐变背景：168deg #E4EEFF → #EFF4FF 58% → #F5F7FB，右上薄荷径向光晕。
+/// 高度 160 = 头图内容约 118 + 容量卡叠入的 38 + 少量余量。
+class _HeroBackground extends StatelessWidget {
+  const _HeroBackground();
 
   @override
   Widget build(BuildContext context) {
@@ -69,51 +84,64 @@ class _Hero extends StatelessWidget {
             ),
           ),
         ),
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment(-0.208, -0.978),
-              end: Alignment(0.208, 0.978),
-              stops: <double>[0, 0.58, 1],
-              colors: <Color>[
-                Color(0xFFE4EEFF),
-                Color(0xFFEFF4FF),
-                QyColors.canvas,
-              ],
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment(-0.208, -0.978),
+                end: Alignment(0.208, 0.978),
+                stops: <double>[0, 0.58, 1],
+                colors: <Color>[
+                  Color(0xFFE4EEFF),
+                  Color(0xFFEFF4FF),
+                  QyColors.canvas,
+                ],
+              ),
             ),
-          ),
-          padding: const EdgeInsets.fromLTRB(18, 58, 18, 52),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text('下午好', style: ProtoText.heroHi),
-                    SizedBox(height: 4),
-                    Text('林小轻', style: ProtoText.heroName),
-                  ],
-                ),
-              ),
-              ProtoIconButton(
-                icon: Icons.search,
-                glass: true,
-                onTap: () => context.go(QyRoutes.search),
-              ),
-              const SizedBox(width: 8),
-              ProtoIconButton(
-                icon: Icons.qr_code_scanner,
-                glass: true,
-                onTap: () => showQyToast(context, '扫一扫：可扫描文档上传'),
-              ),
-              const SizedBox(width: 8),
-              _Avatar(onTap: () => context.go(QyRoutes.profile)),
-            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 固定的头图内容：问候语 + 搜索 / 扫一扫 / 头像，背景透明（渐变由底层提供）。
+class _HeroContent extends StatelessWidget {
+  const _HeroContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 58, 18, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('下午好', style: ProtoText.heroHi),
+                SizedBox(height: 4),
+                Text('林小轻', style: ProtoText.heroName),
+              ],
+            ),
+          ),
+          ProtoIconButton(
+            icon: Icons.search,
+            glass: true,
+            onTap: () => context.go(QyRoutes.search),
+          ),
+          const SizedBox(width: 8),
+          ProtoIconButton(
+            icon: Icons.qr_code_scanner,
+            glass: true,
+            onTap: () => showQyToast(context, '扫一扫：可扫描文档上传'),
+          ),
+          const SizedBox(width: 8),
+          _Avatar(onTap: () => context.go(QyRoutes.profile)),
+        ],
+      ),
     );
   }
 }
@@ -413,41 +441,44 @@ class _RecentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 154,
-      child: ListView(
+    // 与胶囊行同理：用 Row 自然撑开高度，不再给横向列表写死高度，
+    // 避免任何机型上把卡片底部的文件名 / 元信息裁掉。
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 2, 18, 4),
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(18, 2, 18, 4),
-        children: <Widget>[
-          _FileCard(
-            colors: const <Color>[Color(0xFF4C8DFF), Color(0xFF7FB6FF)],
-            icon: Icons.image,
-            name: '海边日落.jpg',
-            meta: '今天 14:22 · 4.2 MB',
-            onTap: onTap,
-          ),
-          _FileCard(
-            colors: const <Color>[QyColors.mint, Color(0xFF63E0CB)],
-            icon: Icons.description,
-            name: '项目方案.pptx',
-            meta: '今天 11:05 · 12.4 MB',
-            onTap: onTap,
-          ),
-          _FileCard(
-            colors: const <Color>[QyColors.amber, Color(0xFFFFD27A)],
-            icon: Icons.movie,
-            name: '4K 风景.mp4',
-            meta: '昨天 · 386 MB',
-            onTap: onTap,
-          ),
-          _FileCard(
-            colors: const <Color>[Color(0xFFA78BFF), Color(0xFFC9B8FF)],
-            icon: Icons.picture_as_pdf,
-            name: '年度报告.pdf',
-            meta: '昨天 · 8.6 MB',
-            onTap: onTap,
-          ),
-        ],
+        child: Row(
+          children: <Widget>[
+            _FileCard(
+              colors: const <Color>[Color(0xFF4C8DFF), Color(0xFF7FB6FF)],
+              icon: Icons.image,
+              name: '海边日落.jpg',
+              meta: '今天 14:22 · 4.2 MB',
+              onTap: onTap,
+            ),
+            _FileCard(
+              colors: const <Color>[QyColors.mint, Color(0xFF63E0CB)],
+              icon: Icons.description,
+              name: '项目方案.pptx',
+              meta: '今天 11:05 · 12.4 MB',
+              onTap: onTap,
+            ),
+            _FileCard(
+              colors: const <Color>[QyColors.amber, Color(0xFFFFD27A)],
+              icon: Icons.movie,
+              name: '4K 风景.mp4',
+              meta: '昨天 · 386 MB',
+              onTap: onTap,
+            ),
+            _FileCard(
+              colors: const <Color>[Color(0xFFA78BFF), Color(0xFFC9B8FF)],
+              icon: Icons.picture_as_pdf,
+              name: '年度报告.pdf',
+              meta: '昨天 · 8.6 MB',
+              onTap: onTap,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -507,7 +538,20 @@ class _FileCard extends StatelessWidget {
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: QyColors.ink),
               ),
               const SizedBox(height: 3),
-              Text(meta, style: const TextStyle(fontSize: 10, color: QyColors.muted)),
+              // 106px 内容宽里放中文 + 数字 + 单位，真机字体略宽时会折行；
+              // 用 scaleDown 保持单行完整显示（原型 .f-meta 亦为单行）。
+              SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    meta,
+                    maxLines: 1,
+                    style: const TextStyle(fontSize: 10, color: QyColors.muted),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

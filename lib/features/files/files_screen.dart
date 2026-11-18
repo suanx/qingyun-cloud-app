@@ -42,20 +42,10 @@ class _FilesScreenState extends State<FilesScreen> {
                   ),
                 ],
               ),
-              SizedBox(
-                height: 46,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(18, 4, 18, 14),
-                  children: <Widget>[
-                    for (var i = 0; i < _chips.length; i++)
-                      ProtoChip(
-                        label: _chips[i],
-                        active: i == _chip,
-                        onTap: () => setState(() => _chip = i),
-                      ),
-                  ],
-                ),
+              ProtoChipRow(
+                labels: _chips,
+                activeIndex: _chip,
+                onChanged: (int i) => setState(() => _chip = i),
               ),
               const _FolderGrid(),
               const ProtoSectionHead(

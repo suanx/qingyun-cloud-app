@@ -194,7 +194,8 @@ class ProtoSectionHead extends StatelessWidget {
   }
 }
 
-/// 原型筛选胶囊。
+/// 原型筛选胶囊：高度由「上下 7 padding + 文字行高 + 描边」自然撑开，
+/// 不设固定高度，任何机型/字号缩放下都不会裁掉文字下半截。
 class ProtoChip extends StatelessWidget {
   const ProtoChip({
     super.key,
@@ -209,32 +210,70 @@ class ProtoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return QyTapScale(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: QyTokens.shortMotion,
+        curve: qyProtoCurve,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? QyColors.primary : QyColors.surface,
+          border: Border.all(color: active ? QyColors.primary : QyColors.border),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
+          boxShadow: active
+              ? const <BoxShadow>[
+                  BoxShadow(color: Color(0x402F6BFF), blurRadius: 12, offset: Offset(0, 4)),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: active ? FontWeight.w500 : FontWeight.w400,
+            color: active ? QyColors.onDark : const Color(0xFF475467),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 原型 `.chip-row`：display:flex + gap:8 + padding 4/18/14 + overflow-x:auto。
+///
+/// 用 SingleChildScrollView + Row 而非「固定高度 + 横向 ListView」：
+/// 横向 ListView 会把 children 压进 viewport 高度，固定值偏小就会裁掉中文字
+/// 下半截（传输页、全部文件页红框处的缺笔画即由此而来）。Row 的高度由内容
+/// 自然撑开，彻底消除这类裁切，同时仍可横向滑动。
+class ProtoChipRow extends StatelessWidget {
+  const ProtoChipRow({
+    super.key,
+    required this.labels,
+    required this.activeIndex,
+    required this.onChanged,
+  });
+
+  final List<String> labels;
+  final int activeIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: QyTapScale(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: QyTokens.shortMotion,
-          curve: qyProtoCurve,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: active ? QyColors.primary : QyColors.surface,
-            border: Border.all(color: active ? QyColors.primary : QyColors.border),
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
-            boxShadow: active
-                ? const <BoxShadow>[
-                    BoxShadow(color: Color(0x402F6BFF), blurRadius: 12, offset: Offset(0, 4)),
-                  ]
-                : null,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: active ? FontWeight.w500 : FontWeight.w400,
-              color: active ? QyColors.onDark : const Color(0xFF475467),
-            ),
-          ),
+      padding: const EdgeInsets.fromLTRB(18, 4, 18, 14),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: <Widget>[
+            for (var i = 0; i < labels.length; i++) ...<Widget>[
+              if (i > 0) const SizedBox(width: 8),
+              ProtoChip(
+                label: labels[i],
+                active: i == activeIndex,
+                onTap: () => onChanged(i),
+              ),
+            ],
+          ],
         ),
       ),
     );
