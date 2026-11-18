@@ -1,260 +1,126 @@
-import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
-import '../../core/models/cloud_models.dart';
-import '../../core/network/cloud_repository.dart';
-import '../../core/router/app_router.dart';
+import '../../widgets/proto_widgets.dart';
 
-/// 首页概览卡片数量（横向 PageView 页数，与下方指示器一一对应）。
-const int _overviewCount = 3;
-
-/// 分类胶囊对应的落地页；第 4 项「分类」为空，表示切换到文件 Tab。
-/// 早期实现 push 到 `/files`，而该页没有不透明背景，转场途中会透出
-/// 下层首页形成灰色浮层，现改为切 Tab，从根上消除这个叠加画面。
-const List<String?> _entryRoutes = <String?>[
-  AppRouter.gallery,
-  AppRouter.allFiles,
-  AppRouter.videos,
-  null,
-];
-
-const List<String> _entryLabels = <String>['相册', '文件', '视频', '分类'];
-
-/// 首页：品牌抬头 + 概览卡片轮播 + 分类胶囊 + 最近文件。
-///
-/// 纯白画布、玻璃面卡片（无真实模糊层）、横向可滑动的概览卡、扁平
-/// 分隔线式最近文件列表。各区块带交错淡入上滑动画，交互统一使用
-/// [QyTapScale] 的圆润按压回弹。
-class HomeScreen extends StatefulWidget {
+/// 01 首页 · 存储概览（对齐 screen-home）。
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final CloudRepository _repository = CloudRepository();
-  final PageController _overviewController = PageController(viewportFraction: 0.46);
-
-  List<CloudFile> _recent = const <CloudFile>[];
-  StorageSummary _summary = MockData.storageSummary;
-  int _entry = 0;
-  int _overviewPage = 0;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void dispose() {
-    _overviewController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    try {
-      final files = await _repository.files();
-      final summary = await _repository.storageSummary();
-      if (!mounted) return;
-      setState(() {
-        _recent = files;
-        _summary = summary;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-    }
-  }
-
-  void _onEntrySelected(int index) {
-    setState(() => _entry = index);
-    final String? route = _entryRoutes[index];
-    if (route == null) {
-      context.go(QyRoutes.files);
-      return;
-    }
-    context.push(route);
-  }
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
       color: QyColors.canvas,
-      child: SafeArea(
-        child: RefreshIndicator(
-          color: QyColors.primaryDeep,
-          onRefresh: _load,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-            children: <Widget>[
-              _Enter(
-                step: 0,
-                child: _Header(
-                  onSearch: () => context.push(QyRoutes.search),
-                  onNotice: () => context.push(QyRoutes.states),
-                ),
-              ),
-              const SizedBox(height: 28),
-              _Enter(
-                step: 1,
-                child: _OverviewCarousel(
-                  controller: _overviewController,
-                  page: _overviewPage,
-                  summary: _summary,
-                  onPageChanged: (int page) => setState(() => _overviewPage = page),
-                ),
-              ),
-              const SizedBox(height: QyTokens.spaceXxl),
-              _Enter(
-                step: 2,
-                child: _CategoryBar(selected: _entry, onSelected: _onEntrySelected),
-              ),
-              const SizedBox(height: QyTokens.spaceXxxl),
-              _Enter(
-                step: 3,
-                child: _SectionHeader(
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 96),
+        children: <Widget>[
+          const _Hero(),
+          // 容量卡上移 38 叠进头图，后续内容整体跟随，保持块间相对间距。
+          Transform.translate(
+            offset: const Offset(0, -38),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _StorageCard(onTap: () => context.go(QyRoutes.storage)),
+                const _QuickGrid(),
+                ProtoSectionHead(
                   title: '最近文件',
-                  actionLabel: '全部',
-                  onAction: () => context.push(AppRouter.allFiles),
+                  more: '全部',
+                  onMore: () => context.go(QyRoutes.files),
                 ),
-              ),
-              const SizedBox(height: QyTokens.spaceMd),
-              if (_loading)
-                const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(child: CircularProgressIndicator(color: QyColors.primaryDeep)),
-                )
-              else if (_recent.isEmpty)
-                QyEmptyState(
-                  title: '这里还没有文件',
-                  description: '上传第一份文件，开始你的轻云之旅',
-                  actionLabel: '上传第一个文件',
-                  onAction: () => context.push(QyRoutes.transferFiles),
-                )
-              else
-                ...<Widget>[
-                  for (var i = 0; i < _recent.take(2).length; i++)
-                    _Enter(
-                      step: 4 + i,
-                      child: _RecentFileRow(file: _recent[i]),
-                    ),
-                ],
-              const SizedBox(height: 100),
-            ],
+                _RecentRow(onTap: () => context.go(QyRoutes.preview)),
+                const ProtoSectionHead(
+                  title: '为你推荐',
+                  padding: EdgeInsets.fromLTRB(18, 20, 18, 2),
+                ),
+                _MemoryCard(onTap: () => context.go(QyRoutes.album)),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-/// 交错入场：按区块序号延迟播放淡入 + 轻微上滑，曲线柔和。
-class _Enter extends StatefulWidget {
-  const _Enter({required this.step, required this.child});
-
-  final int step;
-  final Widget child;
-
-  @override
-  State<_Enter> createState() => _EnterState();
-}
-
-class _EnterState extends State<_Enter> with SingleTickerProviderStateMixin {
-  Timer? _timer;
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: QyTokens.entranceMotion,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer(qyEntranceStep(widget.step), () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
+/// 渐变头图：168deg #E4EEFF → #EFF4FF 58% → #F5F7FB，右上薄荷径向光晕。
+class _Hero extends StatelessWidget {
+  const _Hero();
 
   @override
   Widget build(BuildContext context) {
-    final Animation<double> curved = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    );
-    return FadeTransition(
-      opacity: curved,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.05),
-          end: Offset.zero,
-        ).animate(curved),
-        child: widget.child,
-      ),
-    );
-  }
-}
-
-/// 品牌抬头：大标题 + 问候语 + 两枚圆形浅底图标按钮。
-class _Header extends StatelessWidget {
-  const _Header({required this.onSearch, required this.onNotice});
-
-  final VoidCallback onSearch;
-  final VoidCallback onNotice;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                '轻云',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontSize: 38,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.5,
-                    ),
+        Positioned(
+          right: -40,
+          top: -30,
+          child: Container(
+            width: 190,
+            height: 190,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                stops: <double>[0, 0.68],
+                colors: <Color>[Color(0x2922C7AC), Color(0x0022C7AC)],
               ),
             ),
-            _RoundIconButton(icon: QyIcons.search, onTap: onSearch),
-            const SizedBox(width: 10),
-            _RoundIconButton(icon: QyIcons.bell, onTap: onNotice),
-          ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          '上午好，今天也要轻轻存文件',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 14,
-                color: QyColors.sub,
-                letterSpacing: 0.2,
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment(-0.208, -0.978),
+              end: Alignment(0.208, 0.978),
+              stops: <double>[0, 0.58, 1],
+              colors: <Color>[
+                Color(0xFFE4EEFF),
+                Color(0xFFEFF4FF),
+                QyColors.canvas,
+              ],
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(18, 58, 18, 52),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text('下午好', style: ProtoText.heroHi),
+                    SizedBox(height: 4),
+                    Text('林小轻', style: ProtoText.heroName),
+                  ],
+                ),
               ),
+              ProtoIconButton(
+                icon: Icons.search,
+                glass: true,
+                onTap: () => context.go(QyRoutes.search),
+              ),
+              const SizedBox(width: 8),
+              ProtoIconButton(
+                icon: Icons.qr_code_scanner,
+                glass: true,
+                onTap: () => showQyToast(context, '扫一扫：可扫描文档上传'),
+              ),
+              const SizedBox(width: 8),
+              _Avatar(onTap: () => context.go(QyRoutes.profile)),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({required this.icon, required this.onTap});
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.onTap});
 
-  final String icon;
   final VoidCallback onTap;
 
   @override
@@ -262,260 +128,153 @@ class _RoundIconButton extends StatelessWidget {
     return QyTapScale(
       onTap: onTap,
       child: Container(
-        width: 42,
-        height: 42,
+        width: 36,
+        height: 36,
         decoration: const BoxDecoration(
-          color: QyColors.surfaceSoft,
           shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment(-0.77, -0.64),
+            end: Alignment(0.77, 0.64),
+            colors: <Color>[Color(0xFF4C8DFF), Color(0xFF7FD9CE)],
+          ),
+          boxShadow: <BoxShadow>[
+            BoxShadow(color: Color(0x402F6BFF), blurRadius: 10, offset: Offset(0, 4)),
+          ],
         ),
-        child: Center(child: QyIcon(icon, size: 21, color: QyColors.ink)),
+        child: const Center(
+          child: Text(
+            '轻',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: QyColors.onDark),
+          ),
+        ),
       ),
     );
   }
 }
 
-/// 概览卡片轮播：每张卡占约 46% 屏宽，第一屏两张完整卡 + 第三张露角。
-class _OverviewCarousel extends StatelessWidget {
-  const _OverviewCarousel({
-    required this.controller,
-    required this.page,
-    required this.summary,
-    required this.onPageChanged,
-  });
+/// 容量卡：环形进度 68% + 分段进度条 + 升级按钮。
+class _StorageCard extends StatelessWidget {
+  const _StorageCard({required this.onTap});
 
-  final PageController controller;
-  final int page;
-  final StorageSummary summary;
-  final ValueChanged<int> onPageChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        SizedBox(
-          height: 206,
-          child: PageView(
-            controller: controller,
-            padEnds: false,
-            onPageChanged: onPageChanged,
-            children: <Widget>[
-              _OverviewCard(
-                onTap: () => context.push(AppRouter.gallery),
-                child: const _PhotoOverview(),
-              ),
-              _OverviewCard(
-                color: QyColors.surfaceSoft,
-                onTap: () => context.push(QyRoutes.storage),
-                child: _StorageOverview(summary: summary),
-              ),
-              _OverviewCard(
-                onTap: () => context.go(QyRoutes.transfers),
-                child: const _TransferOverview(),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: QyTokens.spaceLg),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            for (var i = 0; i < _overviewCount; i++) _PageDot(active: i == page),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-/// 统一的玻璃面概览卡：大圆角 + 极淡描边 + 柔投影 + 按压回弹。
-class _OverviewCard extends StatelessWidget {
-  const _OverviewCard({
-    required this.child,
-    required this.onTap,
-    this.color = QyColors.surface,
-  });
-
-  final Widget child;
   final VoidCallback onTap;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: QyTokens.spaceMd),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: QyTapScale(
         onTap: onTap,
-        child: QyCard(
-          color: color,
-          padding: const EdgeInsets.all(18),
-          child: child,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: QyColors.surface,
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(color: Color(0x291F4899), offset: Offset(0, 10), blurRadius: 26, spreadRadius: -8),
+            ],
+          ),
+          child: Row(
+            children: <Widget>[
+              const _Ring(),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text('存储空间', style: ProtoText.label11),
+                    SizedBox(height: 3),
+                    Text.rich(
+                      TextSpan(
+                        style: ProtoText.value14,
+                        children: <TextSpan>[
+                          TextSpan(text: '174.2 GB '),
+                          TextSpan(
+                            text: '/ 256 GB',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: QyColors.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    _StorageBar(),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              _UpgradeButton(
+                label: '升级',
+                onTap: () => showQyToast(context, '升级会员，最高 2TB 空间'),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _Ring extends StatelessWidget {
+  const _Ring();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 54,
+      height: 54,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          Transform.rotate(
+            angle: -math.pi / 2,
+            child: Container(
+              width: 54,
+              height: 54,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(
+                  stops: <double>[0, 0.68, 0.68, 1],
+                  colors: <Color>[
+                    QyColors.primary,
+                    QyColors.primary,
+                    Color(0xFFE9EFF9),
+                    Color(0xFFE9EFF9),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: const BoxDecoration(color: QyColors.surface, shape: BoxShape.circle),
+          ),
+          const Text(
+            '68%',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: QyColors.primary),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// 大数字：固定高度 + scaleDown，保证「8.2」这类小数永远单行不折行。
-Widget _bigNumber(String value) => SizedBox(
-      height: 52,
-      width: double.infinity,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Text(
-          value,
-          softWrap: false,
-          maxLines: 1,
-          style: const TextStyle(
-            fontSize: 52,
-            height: 1,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -1.5,
-            color: QyColors.ink,
-          ),
-        ),
-      ),
-    );
-
-Widget _overviewTitle(BuildContext context, String label) => Text(
-      label,
-      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-    );
-
-Widget _overviewUnit(BuildContext context, String label) => Text(
-      label,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
-    );
-
-/// 最近照片卡：大数字 + 右下角海边日落缩略图。
-class _PhotoOverview extends StatelessWidget {
-  const _PhotoOverview();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _overviewTitle(context, '最近照片'),
-        const Spacer(),
-        _bigNumber(MockData.recentPhotoCount.toString()),
-        const SizedBox(height: 4),
-        _overviewUnit(context, '张'),
-        const Spacer(),
-        const Align(alignment: Alignment.bottomRight, child: _SunsetThumb(size: 64)),
-      ],
-    );
-  }
-}
-
-/// 存储空间卡：已用容量 + 占比进度条。
-class _StorageOverview extends StatelessWidget {
-  const _StorageOverview({required this.summary});
-
-  final StorageSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _overviewTitle(context, '存储空间'),
-        const Spacer(),
-        _bigNumber(summary.usedGb.toStringAsFixed(1)),
-        const SizedBox(height: 4),
-        _overviewUnit(context, 'GB 已用'),
-        const Spacer(),
-        QyProgressBar(value: summary.ratio),
-      ],
-    );
-  }
-}
-
-/// 传输任务卡：进行中任务数 + 进度。
-class _TransferOverview extends StatelessWidget {
-  const _TransferOverview();
-
-  @override
-  Widget build(BuildContext context) {
-    final int running = MockData.transfers
-        .where((TransferTask task) => task.status == TransferStatus.running)
-        .length;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _overviewTitle(context, '传输任务'),
-        const Spacer(),
-        _bigNumber('$running'),
-        const SizedBox(height: 4),
-        _overviewUnit(context, '个进行中'),
-        const Spacer(),
-        const QyProgressBar(value: 0.62),
-      ],
-    );
-  }
-}
-
-/// 设计稿「海边日落」缩略图：纯 Dart 渐变绘制，不引入图片资源。
-class _SunsetThumb extends StatelessWidget {
-  const _SunsetThumb({required this.size});
-
-  final double size;
+class _StorageBar extends StatelessWidget {
+  const _StorageBar();
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: const BorderRadius.all(Radius.circular(16)),
+      borderRadius: const BorderRadius.all(Radius.circular(2)),
       child: SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          children: <Widget>[
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: <double>[0, 0.58, 1],
-                    colors: <Color>[
-                      Color(0xFFF6C489),
-                      Color(0xFFFCE7C7),
-                      Color(0xFF7FA9C4),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: size * 0.39,
-              top: size * 0.28,
-              child: Container(
-                width: size * 0.22,
-                height: size * 0.22,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFF6DC),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: size * 0.42,
-              child: const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[Color(0x6687B2CB), Color(0xFF5A89A6)],
-                  ),
-                ),
-              ),
-            ),
+        height: 4,
+        child: Row(
+          children: const <Widget>[
+            Expanded(flex: 36, child: ColoredBox(color: Color(0xFF4C8DFF))),
+            Expanded(flex: 20, child: ColoredBox(color: QyColors.mint)),
+            Expanded(flex: 8, child: ColoredBox(color: QyColors.amber)),
+            Expanded(flex: 4, child: ColoredBox(color: Color(0xFFA78BFF))),
+            Expanded(flex: 32, child: ColoredBox(color: QyColors.track)),
           ],
         ),
       ),
@@ -523,142 +282,122 @@ class _SunsetThumb extends StatelessWidget {
   }
 }
 
-/// 轮播指示器：当前页为胶囊，其余为小圆点，宽度带动画。
-class _PageDot extends StatelessWidget {
-  const _PageDot({required this.active});
+/// 原型通用「升级 / 立即开通」渐变胶囊。
+class _UpgradeButton extends StatelessWidget {
+  const _UpgradeButton({required this.label, required this.onTap});
 
-  final bool active;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: QyTokens.mediumMotion,
-      curve: Curves.easeOutCubic,
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      width: active ? 18 : 6,
-      height: 6,
-      decoration: BoxDecoration(
-        color: active ? QyColors.primary : QyColors.border,
-        borderRadius: const BorderRadius.all(Radius.circular(3)),
+    return QyTapScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          gradient: LinearGradient(
+            begin: Alignment(-0.7, -0.7),
+            end: Alignment(0.7, 0.7),
+            colors: <Color>[Color(0xFF3C7CFF), Color(0xFF6FA8FF)],
+          ),
+          boxShadow: <BoxShadow>[
+            BoxShadow(color: Color(0x472F6BFF), blurRadius: 10, offset: Offset(0, 4)),
+          ],
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: QyColors.onDark),
+        ),
       ),
     );
   }
 }
 
-/// 分类胶囊：选中高亮块在四个槽位间滑动，右侧「已同步」状态点。
-class _CategoryBar extends StatelessWidget {
-  const _CategoryBar({required this.selected, required this.onSelected});
-
-  final int selected;
-  final ValueChanged<int> onSelected;
+/// 四宫格快捷入口。
+class _QuickGrid extends StatelessWidget {
+  const _QuickGrid();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final double slot = constraints.maxWidth / _entryLabels.length;
-              return Container(
-                height: 54,
-                decoration: BoxDecoration(
-                  border: Border.all(color: QyColors.border, width: 1),
-                  borderRadius: const BorderRadius.all(Radius.circular(QyTokens.radiusPill)),
-                ),
-                child: Stack(
-                  children: <Widget>[
-                    AnimatedPositioned(
-                      duration: QyTokens.mediumMotion,
-                      curve: Curves.easeOutCubic,
-                      left: 4 + selected * slot,
-                      top: 4,
-                      bottom: 4,
-                      width: slot - 8,
-                      child: const DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: QyColors.primaryDeep,
-                          borderRadius: BorderRadius.all(Radius.circular(QyTokens.radiusPill)),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: <Widget>[
-                        for (var i = 0; i < _entryLabels.length; i++)
-                          _CategoryChip(
-                            label: _entryLabels[i],
-                            icon: i == 3 ? QyIcons.list : null,
-                            selected: i == selected,
-                            onTap: () => onSelected(i),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 20, 12, 4),
+      child: Row(
+        children: <Widget>[
+          _QuickItem(
+            icon: Icons.cloud_upload,
+            iconColor: QyColors.primary,
+            background: QyColors.primaryLight,
+            label: '上传',
+            onTap: () => showQyToast(context, '选择文件上传中…'),
           ),
-        ),
-        const SizedBox(width: QyTokens.spaceMd),
-        Text(
-          '已同步',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(fontSize: 12),
-        ),
-        const SizedBox(width: 6),
-        Container(
-          width: 7,
-          height: 7,
-          decoration: const BoxDecoration(color: QyColors.primary, shape: BoxShape.circle),
-        ),
-      ],
+          _QuickItem(
+            icon: Icons.create_new_folder,
+            iconColor: QyColors.mintDeep,
+            background: QyColors.mintSoft,
+            label: '新建',
+            onTap: () => showQyToast(context, '新建文件夹'),
+          ),
+          _QuickItem(
+            icon: Icons.swap_vert,
+            iconColor: QyColors.amberDeep,
+            background: QyColors.amberSoft,
+            label: '传输',
+            onTap: () => context.go(QyRoutes.transfers),
+          ),
+          _QuickItem(
+            icon: Icons.delete_outline,
+            iconColor: QyColors.violetDeep,
+            background: QyColors.violetSoft,
+            label: '回收站',
+            onTap: () => showQyToast(context, '回收站：12 个文件'),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
+class _QuickItem extends StatelessWidget {
+  const _QuickItem({
+    required this.icon,
+    required this.iconColor,
+    required this.background,
     required this.label,
-    required this.selected,
     required this.onTap,
-    this.icon,
   });
 
+  final IconData icon;
+  final Color iconColor;
+  final Color background;
   final String label;
-  final bool selected;
   final VoidCallback onTap;
-  final String? icon;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: QyTapScale(
         onTap: onTap,
-        child: SizedBox(
-          height: 46,
-          child: Center(
-            child: AnimatedDefaultTextStyle(
-              duration: QyTokens.shortMotion,
-              curve: Curves.easeOutCubic,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected ? QyColors.onDark : QyColors.sub,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            children: <Widget>[
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: background,
+                  borderRadius: const BorderRadius.all(Radius.circular(15)),
+                ),
+                child: Icon(icon, size: 22, color: iconColor),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (icon != null) ...<Widget>[
-                    QyIcon(
-                      icon!,
-                      size: 15,
-                      color: selected ? QyColors.onDark : QyColors.sub,
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                  Text(label),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11.5, color: Color(0xFF475467)),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -666,104 +405,202 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-/// 区块标题 + 右侧文字动作。
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.actionLabel,
-    required this.onAction,
-  });
+/// 最近文件横滑卡片。
+class _RecentRow extends StatelessWidget {
+  const _RecentRow({required this.onTap});
 
-  final String title;
-  final String actionLabel;
-  final VoidCallback onAction;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Text(
-          title,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-        const Spacer(),
-        QyTapScale(
-          onTap: onAction,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Text(
-              actionLabel,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontSize: 14,
-                    color: QyColors.primary,
-                  ),
-            ),
+    return SizedBox(
+      height: 154,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(18, 2, 18, 4),
+        children: <Widget>[
+          _FileCard(
+            colors: const <Color>[Color(0xFF4C8DFF), Color(0xFF7FB6FF)],
+            icon: Icons.image,
+            name: '海边日落.jpg',
+            meta: '今天 14:22 · 4.2 MB',
+            onTap: onTap,
           ),
-        ),
-      ],
+          _FileCard(
+            colors: const <Color>[QyColors.mint, Color(0xFF63E0CB)],
+            icon: Icons.description,
+            name: '项目方案.pptx',
+            meta: '今天 11:05 · 12.4 MB',
+            onTap: onTap,
+          ),
+          _FileCard(
+            colors: const <Color>[QyColors.amber, Color(0xFFFFD27A)],
+            icon: Icons.movie,
+            name: '4K 风景.mp4',
+            meta: '昨天 · 386 MB',
+            onTap: onTap,
+          ),
+          _FileCard(
+            colors: const <Color>[Color(0xFFA78BFF), Color(0xFFC9B8FF)],
+            icon: Icons.picture_as_pdf,
+            name: '年度报告.pdf',
+            meta: '昨天 · 8.6 MB',
+            onTap: onTap,
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// 最近文件行：浅色圆角图标底 + 扁平布局 + 极淡分割线 + 按压回弹。
-class _RecentFileRow extends StatelessWidget {
-  const _RecentFileRow({required this.file});
+class _FileCard extends StatelessWidget {
+  const _FileCard({
+    required this.colors,
+    required this.icon,
+    required this.name,
+    required this.meta,
+    required this.onTap,
+  });
 
-  final CloudFile file;
+  final List<Color> colors;
+  final IconData icon;
+  final String name;
+  final String meta;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return QyTapScale(
-      onTap: () => context.push(QyRoutes.preview),
-      child: Column(
-        children: <Widget>[
-          SizedBox(
-            height: 88,
-            child: Row(
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: QyTapScale(
+        onTap: onTap,
+        child: Container(
+          width: 126,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: QyColors.surface,
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            border: Border.all(color: const Color(0xFFF3F6FC)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+                height: 74,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(Radius.circular(11)),
+                  gradient: LinearGradient(
+                    begin: Alignment(-0.77, -0.64),
+                    end: Alignment(0.77, 0.64),
+                    colors: colors,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(icon, size: 30, color: const Color(0xEBFFFFFF)),
+                ),
+              ),
+              const SizedBox(height: 9),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: QyColors.ink),
+              ),
+              const SizedBox(height: 3),
+              Text(meta, style: const TextStyle(fontSize: 10, color: QyColors.muted)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 为你推荐 · 相册回忆渐变卡。
+class _MemoryCard extends StatelessWidget {
+  const _MemoryCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: QyTapScale(
+        onTap: onTap,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment(-0.82, -0.57),
+                end: Alignment(0.82, 0.57),
+                stops: <double>[0, 0.46, 1],
+                colors: <Color>[QyColors.primary, Color(0xFF4E8BFF), Color(0xFF37C9B4)],
+              ),
+              boxShadow: <BoxShadow>[
+                BoxShadow(color: Color(0x8C2F6BFF), blurRadius: 30, offset: Offset(0, 14), spreadRadius: -12),
+              ],
+            ),
+            child: Stack(
               children: <Widget>[
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: QyColors.surfaceSoft,
-                    borderRadius: BorderRadius.all(Radius.circular(14)),
-                  ),
-                  child: Center(
-                    child: QyIcon(file.category.iconName, size: 24, color: file.category.tint),
-                  ),
-                ),
-                const SizedBox(width: QyTokens.spaceLg),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        file.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${file.updatedLabel} · ${file.sizeLabel}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
-                      ),
-                    ],
+                Positioned(
+                  right: -30,
+                  bottom: -46,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: const BoxDecoration(
+                      color: Color(0x21FFFFFF),
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-                const QyIcon(QyIcons.more, size: 20, color: QyColors.muted),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Text(
+                      '相册回忆',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.4,
+                        color: Color(0xCCFFFFFF),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '去年的今天 · 32 张照片',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: QyColors.onDark),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      '在青岛的那几天，海风很好',
+                      style: TextStyle(fontSize: 12, color: Color(0xD1FFFFFF)),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: const BoxDecoration(
+                        color: Color(0x33FFFFFF),
+                        borderRadius: BorderRadius.all(Radius.circular(20)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text('去看看', style: TextStyle(fontSize: 12, color: QyColors.onDark)),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward, size: 15, color: QyColors.onDark),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          const Divider(color: QyColors.divider, height: 1),
-        ],
+        ),
       ),
     );
   }

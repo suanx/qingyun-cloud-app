@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../theme/qy_tokens.dart';
 
-/// 全局页面转场：淡入 + 轻微上滑 + 微小缩放，全程柔和曲线。
-///
-/// 替代系统默认带灰色 scrim 的硬切换，让所有页面的进入 / 返回都保持
-/// 连续、圆润、无遮挡的观感；也不会在转场途中透出下层页面的内容。
+/// 原型 screenIn 动画曲线：cubic-bezier(.22,.9,.3,1)。
+const Curve qyProtoCurve = Cubic(0.22, 0.9, 0.3, 1);
+
+/// 全局页面转场：与原型 `.screen.active` 一致——
+/// 淡入 + 上滑 10px + 缩放 .995，320ms，无灰色 scrim，不遮挡下层内容。
 class QyPageTransitionsBuilder extends PageTransitionsBuilder {
   const QyPageTransitionsBuilder();
 
@@ -19,18 +20,18 @@ class QyPageTransitionsBuilder extends PageTransitionsBuilder {
   ) {
     final Animation<double> curved = CurvedAnimation(
       parent: animation,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
+      curve: qyProtoCurve,
+      reverseCurve: qyProtoCurve,
     );
     return FadeTransition(
       opacity: curved,
       child: SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0, 0.024),
+          begin: const Offset(0, 0.0123),
           end: Offset.zero,
         ).animate(curved),
         child: ScaleTransition(
-          scale: Tween<double>(begin: 0.978, end: 1).animate(curved),
+          scale: Tween<double>(begin: 0.995, end: 1).animate(curved),
           child: child,
         ),
       ),

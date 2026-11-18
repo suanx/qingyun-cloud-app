@@ -10,23 +10,24 @@ abstract final class QyTokens {
   static const double spaceXxl = 24;
   static const double spaceXxxl = 32;
 
-  static const double radiusSm = 12;
-  static const double radiusMd = 16;
-  static const double radiusLg = 20;
+  // 原型：--r-sm 10 / --r-md 14 / --r-lg 18 / --r-xl 24
+  static const double radiusSm = 10;
+  static const double radiusMd = 14;
+  static const double radiusLg = 18;
   static const double radiusXl = 24;
-  static const double radiusCard = 26;
+  static const double radiusCard = 20;
   static const double radiusPill = 999;
 
   static const double buttonHeight = 52;
-  static const double statusBarHeight = 62;
-  static const double navHeight = 84;
+  static const double statusBarHeight = 48;
+  static const double navHeight = 74;
   static const double navPillHeight = 62;
 
   static const Duration shortMotion = Duration(milliseconds: 200);
   static const Duration mediumMotion = Duration(milliseconds: 320);
-  static const Duration entranceMotion = Duration(milliseconds: 460);
+  static const Duration entranceMotion = Duration(milliseconds: 320);
   static const int entranceStepMilliseconds = 70;
-  static const Duration toastDuration = Duration(seconds: 2);
+  static const Duration toastDuration = Duration(milliseconds: 1900);
 
   static BoxShadow softShadow(Color color) => BoxShadow(
         color: color,
@@ -42,11 +43,10 @@ abstract final class QyTokens {
         spreadRadius: -4,
       );
 
-  /// 卡片专用：更大模糊半径、更大负扩散，投影更轻更柔。
   static BoxShadow cardShadowSoft(Color color) => BoxShadow(
         color: color,
         offset: const Offset(0, 10),
-        blurRadius: 30,
-        spreadRadius: -10,
+        blurRadius: 26,
+        spreadRadius: -8,
       );
 }

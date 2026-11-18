@@ -4,8 +4,8 @@ import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 import '../../core/models/cloud_models.dart';
 import 'files_screen.dart';
 
-/// 通用文件浏览器页：带返回栏的文件列表，供首页「相册 / 文件 / 视频」等
-/// 卡片入口 push 使用，返回时可回到上一个页面。
+/// 历史文件浏览器页：原型收敛后所有入口统一走 FilesScreen，
+/// 保留本页只为兼容旧路由常量，路由表中已重定向到 /files。
 class FilesBrowserScreen extends StatelessWidget {
   const FilesBrowserScreen({
     super.key,
@@ -15,21 +15,14 @@ class FilesBrowserScreen extends StatelessWidget {
 
   final String title;
 
-  /// 初始选中的文件分类；为空时展示全部文件。
+  /// 保留参数以兼容历史调用（原型页面不再按分类区分）。
   final FileCategory? category;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: QyFrostAppBar(
-        title: Text(title, style: Theme.of(context).textTheme.titleLarge),
-        leading: IconButton(
-          icon: const QyIcon(QyIcons.back, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-      ),
-      body: FilesScreen(initialCategory: category, showHeader: false),
+      body: FilesScreen(),
     );
   }
 }

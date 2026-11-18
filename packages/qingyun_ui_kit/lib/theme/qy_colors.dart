@@ -1,52 +1,65 @@
 import 'package:flutter/material.dart';
 
-/// Cool slate-blue palette on a pure white canvas.
+/// 轻云高保真原型 v1 色板。
 ///
-/// 视觉规范（对齐参考图）：
-/// - 页面背景一律纯白，不再使用暖黄画布、渐变与装饰底纹；
-/// - 主色为钢青蓝灰（参考图进度条 / 底部导航选中态）；
-/// - 文字近黑 + 冷灰两级；
-/// - 另定义一组同饱和度的彩色强调色，供彩色图标系统使用。
+/// 与《轻云-云盘App原型-v1.html》的 :root 变量一一对应：
+/// --primary #2F6BFF / --mint #22C7AC / --amber #FFB020 /
+/// --violet #8C7BFF / --pink #FF7AA2 / --bg #F5F7FB。
 abstract final class QyColors {
-  static const Color primary = Color(0xFF4A7386);
-  static const Color primaryDeep = Color(0xFF39596A);
-  static const Color primaryLight = Color(0xFFE3EDF2);
+  static const Color primary = Color(0xFF2F6BFF);
+  static const Color primaryDeep = Color(0xFF1E4FD8);
+  static const Color primaryLight = Color(0xFFEAF1FF);
 
-  /// 纯白画布（所有页面背景）。
-  static const Color canvas = Color(0xFFFFFFFF);
-
+  /// 页面背景（原型 --bg）。
+  static const Color canvas = Color(0xFFF5F7FB);
   static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceSoft = Color(0xFFF5F7FB);
 
-  /// 浅灰蓝卡片底（用于强调卡片，替代原暖黄渐变）。
-  static const Color surfaceSoft = Color(0xFFF4F7F9);
+  // ---- 原型五组强调色 ----
+  static const Color blueLight = Color(0xFF4C8DFF);
+  static const Color mint = Color(0xFF22C7AC);
+  static const Color mintSoft = Color(0xFFE4F8F4);
+  static const Color amber = Color(0xFFFFB020);
+  static const Color amberSoft = Color(0xFFFFF4E0);
+  static const Color violet = Color(0xFF8C7BFF);
+  static const Color violetSoft = Color(0xFFF0EDFF);
+  static const Color pink = Color(0xFFFF7AA2);
+  static const Color pinkSoft = Color(0xFFFFEDF2);
 
-  // ---- 彩色强调色族（彩色图标专用，饱和度统一） ----
-  static const Color coral = Color(0xFFE96A5B);
-  static const Color mint = Color(0xFF2FB5A3);
-  static const Color sky = Color(0xFF4E8FD9);
-  static const Color gold = Color(0xFFD9A441);
-  static const Color violet = Color(0xFF8B7CD8);
-  static const Color leaf = Color(0xFF43AE7C);
+  // 深色变体（图标/文字用）
+  static const Color mintDeep = Color(0xFF12A88F);
+  static const Color amberDeep = Color(0xFFE08A00);
+  static const Color violetDeep = Color(0xFF7B67F0);
+  static const Color pinkDeep = Color(0xFFE04F7C);
 
-  static const Color ink = Color(0xFF20262B);
-  static const Color sub = Color(0xFF8B959E);
-  static const Color muted = Color(0xFFB7BFC6);
-  static const Color border = Color(0xFFE9EDF0);
-  static const Color divider = Color(0xFFF1F4F6);
-  static const Color success = Color(0xFF43AE7C);
-  static const Color error = Color(0xFFE96A5B);
+  // 兼容旧组件的同族 token
+  static const Color sky = blueLight;
+  static const Color gold = amber;
+  static const Color coral = pink;
+  static const Color leaf = mintDeep;
+
+  static const Color ink = Color(0xFF101828);
+  static const Color sub = Color(0xFF667085);
+  static const Color muted = Color(0xFF98A2B3);
+  static const Color border = Color(0xFFEEF2F7);
+  static const Color divider = Color(0xFFF6F8FC);
+  static const Color success = mint;
+  static const Color error = Color(0xFFE04F7C);
   static const Color onDark = Color(0xFFFFFFFF);
 
-  /// 8% 冷灰蓝投影（替代原暖黄投影）。
-  static const Color softShadow = Color(0x14809AAB);
+  /// 原型辅助色
+  static const Color heroLabel = Color(0xFF7A8AA8);
+  static const Color hint = Color(0xFFC3CBD9);
+  static const Color track = Color(0xFFEFF3FA);
+  static const Color chevron = Color(0xFFD2D9E5);
+  static const Color darkBg = Color(0xFF0B0F16);
 
-  // ---- 磨砂玻璃（frosted glass） ----
-  /// 玻璃面：90% 半透明白（卡片、面板、胶囊——内容清晰优先）。
+  /// 8% 冷蓝投影基色（原型 rgba(31,72,153,.16)）。
+  static const Color softShadow = Color(0x291F4899);
+
+  // ---- 玻璃面（真磨砂保持全局关闭）----
   static const Color frost = Color(0xE6FFFFFF);
-
-  /// 强玻璃面：94% 半透明白（应用栏、底部导航等栏体）。
   static const Color frostStrong = Color(0xF0FFFFFF);
-
-  /// 深色玻璃面：72% 墨色（Toast）。
-  static const Color frostDark = Color(0xB820262B);
+  static const Color frostDark = Color(0xDB101828);
+  static const Color navWhite = Color(0xF0FFFFFF);
 }

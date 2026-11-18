@@ -14,6 +14,7 @@ abstract final class QyRoutes {
   static const String profile = '/profile';
   static const String storage = '/storage';
   static const String states = '/states';
+  static const String album = '/album';
 
   static const Map<String, String> titles = <String, String>{
     splash: '启动页',
@@ -28,6 +29,7 @@ abstract final class QyRoutes {
     profile: '个人中心',
     storage: '容量管理',
     states: '空状态与反馈',
+    album: '相册',
   };
 }
 

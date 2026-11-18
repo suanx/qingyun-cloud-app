@@ -3,9 +3,9 @@ abstract final class AppConfig {
   static const String appName = '轻云';
 
   /// 应用版本号（与 pubspec.yaml 的 version 保持一致；Android/iOS 随之同步）。
-  static const String appVersion = '0.1.5';
-  static const int buildNumber = 6;
-  static const String versionLabel = 'v0.1.5 (build 6)';
+  static const String appVersion = '0.1.6';
+  static const int buildNumber = 7;
+  static const String versionLabel = 'v0.1.6 (build 7)';
 
   /// 后端服务基地址。替换为真实服务地址后，将 [useMockData] 置为 false。
   static const String apiBaseUrl = 'https://api.qingyun.example.com';

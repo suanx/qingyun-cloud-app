@@ -1,16 +1,14 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../theme/qy_colors.dart';
 import '../theme/qy_tokens.dart';
-import 'qy_frost.dart';
-import 'qy_icon.dart';
+import 'qy_page_transitions.dart';
 
-void showQyToast(
-  BuildContext context,
-  String message, {
-  bool success = true,
-}) {
-  final overlay = Overlay.of(context);
+/// 原型 Toast：屏幕正中、深色半透明胶囊，1.9 秒后消失。
+void showQyToast(BuildContext context, String message, {bool success = true}) {
+  final OverlayState overlay = Overlay.of(context);
   late final OverlayEntry entry;
   var removed = false;
   void dismiss() {
@@ -20,10 +18,7 @@ void showQyToast(
   }
 
   entry = OverlayEntry(
-    builder: (_) => _QyToastBody(
-      message: message,
-      success: success,
-    ),
+    builder: (_) => _QyToastBody(message: message, success: success),
   );
   overlay.insert(entry);
   Timer(QyTokens.toastDuration, dismiss);
@@ -40,6 +35,8 @@ class _QyToastBody extends StatefulWidget {
 }
 
 class _QyToastBodyState extends State<_QyToastBody> {
+  bool _visible = false;
+
   @override
   void initState() {
     super.initState();
@@ -49,41 +46,46 @@ class _QyToastBodyState extends State<_QyToastBody> {
     });
   }
 
-  bool _visible = false;
-
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: 88,
-      left: 20,
-      right: 20,
-      child: AnimatedOpacity(
-        opacity: _visible ? 1 : 0,
-        duration: QyTokens.shortMotion,
-        child: IgnorePointer(
-          child: QyFrost(
-            color: QyColors.frostDark,
-            backdrop: false,
-            showBorder: false,
-            borderRadius: BorderRadius.circular(QyTokens.radiusLg),
-            shadows: <BoxShadow>[QyTokens.cardShadow(const Color(0x3320262B))],
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
-                children: <Widget>[
-                  QyIcon(
-                    widget.success ? QyIcons.check : QyIcons.info,
-                    size: 22,
-                    color: QyColors.onDark,
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Center(
+          child: AnimatedOpacity(
+            opacity: _visible ? 1 : 0,
+            duration: QyTokens.shortMotion,
+            curve: qyProtoCurve,
+            child: AnimatedScale(
+              scale: _visible ? 1 : 0.96,
+              duration: QyTokens.shortMotion,
+              curve: qyProtoCurve,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: QyColors.frostDark,
+                  borderRadius: BorderRadius.circular(QyTokens.radiusMd),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(
+                        widget.success ? Icons.check_circle : Icons.info_outline,
+                        size: 18,
+                        color: QyColors.onDark,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.message,
+                        style: const TextStyle(
+                          color: QyColors.onDark,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      widget.message,
-                      style: const TextStyle(color: QyColors.onDark, fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
