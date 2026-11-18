@@ -55,15 +55,15 @@ class _FilesScreenState extends State<FilesScreen> {
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.only(bottom: 100),
-                  children: <Widget>[
-                    const ProtoSectionHead(
+                  children: const <Widget>[
+                    ProtoSectionHead(
                       title: '文件',
                       more: '按修改时间',
                       moreIcon: Icons.expand_more,
                       padding: EdgeInsets.fromLTRB(18, 18, 18, 10),
                     ),
-                    const _FileList(),
-                    const ProtoFootNote(
+                    _FileList(),
+                    ProtoFootNote(
                       '已显示全部 5 个文件',
                       padding: EdgeInsets.only(top: 4, bottom: 4),
                     ),

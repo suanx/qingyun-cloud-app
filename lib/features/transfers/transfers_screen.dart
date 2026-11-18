@@ -46,8 +46,8 @@ class _TransfersScreenState extends State<TransfersScreen> {
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 100),
-              children: <Widget>[
-                const _TransferCard(
+              children: const <Widget>[
+                _TransferCard(
                   icon: Icons.movie,
                   iconColor: QyColors.amberDeep,
                   background: QyColors.amberSoft,
@@ -60,7 +60,7 @@ class _TransfersScreenState extends State<TransfersScreen> {
                   footRight: '剩余 1 分钟',
                   toast: '已暂停',
                 ),
-                const _TransferCard(
+                _TransferCard(
                   icon: Icons.audio_file,
                   iconColor: QyColors.violetDeep,
                   background: QyColors.violetSoft,
@@ -73,7 +73,7 @@ class _TransfersScreenState extends State<TransfersScreen> {
                   footRight: '剩余 1 分钟',
                   toast: '已暂停',
                 ),
-                const _TransferCard(
+                _TransferCard(
                   icon: Icons.image,
                   iconColor: QyColors.primary,
                   background: QyColors.primaryLight,
@@ -86,13 +86,13 @@ class _TransfersScreenState extends State<TransfersScreen> {
                   footRight: '—',
                   toast: '已取消',
                 ),
-                const ProtoSectionHead(
+                ProtoSectionHead(
                   title: '今天已完成',
                   more: '3 项',
                   moreIcon: Icons.chevron_right,
                   padding: EdgeInsets.fromLTRB(18, 16, 18, 10),
                 ),
-                const _DoneList(),
+                _DoneList(),
               ],
             ),
           ),
