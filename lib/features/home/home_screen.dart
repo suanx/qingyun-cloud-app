@@ -245,7 +245,7 @@ class _PhotoOverview extends StatelessWidget {
         const SizedBox(height: 4),
         Text('张', style: Theme.of(context).textTheme.bodyMedium),
         const Spacer(),
-        const Align(alignment: Alignment.bottomRight, child: _SunsetThumb()),
+        const Align(alignment: Alignment.bottomRight, child: _SunsetThumb(size: 76)),
       ],
     );
   }
@@ -322,7 +322,7 @@ class _TransferOverview extends StatelessWidget {
 
 /// 设计稿「海边日落」缩略图：纯 Dart 渐变绘制，不引入图片资源，避免打包缺资源。
 class _SunsetThumb extends StatelessWidget {
-  const _SunsetThumb({this.size = 76});
+  const _SunsetThumb({required this.size});
 
   final double size;
 
