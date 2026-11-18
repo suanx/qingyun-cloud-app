@@ -90,9 +90,9 @@ class _MemoryBanner extends StatelessWidget {
                 colors: <Color>[QyColors.primary, Color(0xFF5AA9FF), Color(0xFF37C9B4)],
               ),
             ),
-            child: Stack(
+            child: const Stack(
               children: <Widget>[
-                const Positioned.fill(
+                Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -104,7 +104,7 @@ class _MemoryBanner extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(14),
                   child: Align(
                     alignment: Alignment.bottomLeft,
@@ -121,7 +121,7 @@ class _MemoryBanner extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Positioned(
+                Positioned(
                   right: 16,
                   bottom: 16,
                   child: Icon(Icons.play_circle_filled, size: 26, color: QyColors.onDark),

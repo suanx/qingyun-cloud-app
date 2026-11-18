@@ -58,7 +58,7 @@ class _FilesScreenState extends State<FilesScreen> {
                 ),
               ),
               const _FolderGrid(),
-              ProtoSectionHead(
+              const ProtoSectionHead(
                 title: '文件',
                 more: '按修改时间',
                 moreIcon: Icons.expand_more,

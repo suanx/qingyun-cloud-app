@@ -166,10 +166,10 @@ class _StorageCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: QyColors.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
-            boxShadow: const <BoxShadow>[
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+            boxShadow: <BoxShadow>[
               BoxShadow(color: Color(0x291F4899), offset: Offset(0, 10), blurRadius: 26, spreadRadius: -8),
             ],
           ),
@@ -264,12 +264,12 @@ class _StorageBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.all(Radius.circular(2)),
+    return const ClipRRect(
+      borderRadius: BorderRadius.all(Radius.circular(2)),
       child: SizedBox(
         height: 4,
         child: Row(
-          children: const <Widget>[
+          children: <Widget>[
             Expanded(flex: 36, child: ColoredBox(color: Color(0xFF4C8DFF))),
             Expanded(flex: 20, child: ColoredBox(color: QyColors.mint)),
             Expanded(flex: 8, child: ColoredBox(color: QyColors.amber)),
@@ -490,8 +490,8 @@ class _FileCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.all(Radius.circular(11)),
                   gradient: LinearGradient(
-                    begin: Alignment(-0.77, -0.64),
-                    end: Alignment(0.77, 0.64),
+                    begin: const Alignment(-0.77, -0.64),
+                    end: const Alignment(0.77, 0.64),
                     colors: colors,
                   ),
                 ),

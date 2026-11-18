@@ -147,11 +147,11 @@ class _SearchBar extends StatelessWidget {
                   BoxShadow(color: Color(0x0A1F4899), blurRadius: 8, offset: Offset(0, 2)),
                 ],
               ),
-              child: Row(
+              child: const Row(
                 children: <Widget>[
-                  const Icon(Icons.search, size: 19, color: QyColors.primary),
-                  const SizedBox(width: 8),
-                  const Expanded(
+                  Icon(Icons.search, size: 19, color: QyColors.primary),
+                  SizedBox(width: 8),
+                  Expanded(
                     child: TextField(
                       decoration: InputDecoration(
                         isDense: true,
