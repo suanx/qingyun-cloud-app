@@ -51,7 +51,9 @@ class _TransfersScreenState extends State<TransfersScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return SafeArea(
+    return ColoredBox(
+      color: QyColors.canvas,
+      child: SafeArea(
       child: RefreshIndicator(
         color: QyColors.primaryDeep,
         onRefresh: _load,
@@ -77,6 +79,7 @@ class _TransfersScreenState extends State<TransfersScreen> {
             const SizedBox(height: 96),
           ],
         ),
+      ),
       ),
     );
   }

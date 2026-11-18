@@ -23,17 +23,19 @@ class QyListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return SizedBox(
-      height: 64,
+      height: 68,
       child: QyFrost(
         color: QyColors.frost,
-        borderRadius: BorderRadius.circular(QyTokens.radiusMd),
+        borderRadius: const BorderRadius.all(Radius.circular(QyTokens.radiusLg)),
+        borderColor: QyColors.divider,
+        shadows: <BoxShadow>[QyTokens.softShadow(QyColors.softShadow)],
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(QyTokens.radiusMd),
+            borderRadius: const BorderRadius.all(Radius.circular(QyTokens.radiusLg)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: <Widget>[
                   leading,
@@ -43,9 +45,18 @@ class QyListTile extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(title, style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                        ),
                         if (subtitle != null)
-                          Text(subtitle!, style: textTheme.labelMedium, overflow: TextOverflow.ellipsis),
+                          Text(
+                            subtitle!,
+                            style: textTheme.labelMedium,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                       ],
                     ),
                   ),

@@ -18,10 +18,10 @@ const List<QyBottomNavItem> qyDefaultNavItems = <QyBottomNavItem>[
   QyBottomNavItem(label: '我的', icon: QyIcons.user),
 ];
 
-/// 底部导航：纯白玻璃面（无模糊层）+ 选中态主色实心徽标 + 底部小圆点。
+/// 底部导航：纯白玻璃面（无模糊层）+ 选中态主色圆底白图标 + 底部小圆点。
 ///
-/// 对齐高保真设计稿：背景纯白、无顶部分隔线；首页选中时以主色实心圆
-/// 作为徽标，其余项保持线性图标。真磨砂已在 [QyFrost] 处全局关闭。
+/// 选中项始终保留可辨识的图形：主色实心圆承载白色图标，而不是一个孤立
+/// 的圆点；圆底颜色与图标缩放都带动画，切 Tab 时过渡柔和。
 class QyBottomNav extends StatelessWidget {
   const QyBottomNav({
     super.key,
@@ -42,7 +42,7 @@ class QyBottomNav extends StatelessWidget {
       child: SizedBox(
         height: QyTokens.navHeight,
         child: Padding(
-          padding: const EdgeInsets.only(top: 10, bottom: 18),
+          padding: const EdgeInsets.only(top: 8, bottom: 14),
           child: Row(
             children: <Widget>[
               for (var i = 0; i < items.length; i++)
@@ -70,33 +70,50 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color fg = active ? QyColors.primary : QyColors.muted;
-    return InkWell(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          if (active && item.icon == QyIcons.home)
-            Container(
+          AnimatedScale(
+            scale: active ? 1.06 : 1,
+            duration: QyTokens.shortMotion,
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
+              duration: QyTokens.shortMotion,
+              curve: Curves.easeOutCubic,
               width: 34,
               height: 34,
-              decoration: const BoxDecoration(color: QyColors.primary, shape: BoxShape.circle),
-            )
-          else
-            QyIcon(item.icon, size: 26, color: fg),
-          const SizedBox(height: 6),
-          Text(
-            item.label,
+              decoration: BoxDecoration(
+                color: active ? QyColors.primary : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: QyIcon(
+                  item.icon,
+                  size: active ? 19 : 24,
+                  color: active ? QyColors.onDark : QyColors.muted,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          AnimatedDefaultTextStyle(
+            duration: QyTokens.shortMotion,
+            curve: Curves.easeOutCubic,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               height: 1,
               fontWeight: active ? FontWeight.w600 : FontWeight.w400,
               color: active ? QyColors.ink : QyColors.muted,
             ),
+            child: Text(item.label),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           AnimatedContainer(
             duration: QyTokens.shortMotion,
+            curve: Curves.easeOutCubic,
             width: 4,
             height: 4,
             decoration: BoxDecoration(

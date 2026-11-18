@@ -3,12 +3,12 @@ import '../theme/qy_colors.dart';
 import '../theme/qy_tokens.dart';
 import 'qy_frost.dart';
 
-/// 玻璃面卡片：半透明白玻璃面 + 细描边 + 浅色投影，无模糊层、内容清晰。
+/// 玻璃面卡片：半透明白玻璃面 + 极淡描边 + 大圆角 + 柔投影，无模糊层。
 class QyCard extends StatelessWidget {
   const QyCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(18),
     this.color = QyColors.surface,
     this.elevated = true,
     this.onTap,
@@ -27,14 +27,17 @@ class QyCard extends StatelessWidget {
     // ignore: deprecated_member_use
     final glass = color == QyColors.surface ? QyColors.frost : color.withOpacity(0.86);
     return QyFrost(
-      borderRadius: BorderRadius.circular(QyTokens.radiusLg),
+      borderRadius: const BorderRadius.all(Radius.circular(QyTokens.radiusCard)),
       color: glass,
-      shadows: elevated ? <BoxShadow>[QyTokens.softShadow(QyColors.softShadow)] : null,
+      borderColor: QyColors.divider,
+      shadows: elevated
+          ? <BoxShadow>[QyTokens.cardShadowSoft(QyColors.softShadow)]
+          : null,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(QyTokens.radiusLg),
+          borderRadius: const BorderRadius.all(Radius.circular(QyTokens.radiusCard)),
           child: Padding(padding: padding, child: child),
         ),
       ),

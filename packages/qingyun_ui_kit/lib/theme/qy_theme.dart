@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../components/qy_page_transitions.dart';
 import 'qy_colors.dart';
 import 'qy_tokens.dart';
 import 'qy_typography.dart';
@@ -30,7 +32,8 @@ ThemeData qyLightTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: QyColors.canvas,
     textTheme: qyTextTheme(),
-    splashFactory: InkRipple.splashFactory,
+    // 不显式指定 splashFactory：M3 默认 InkSparkle 波纹比 InkRipple 更圆润。
+    pageTransitionsTheme: qyPageTransitionsTheme,
     appBarTheme: const AppBarTheme(
       backgroundColor: QyColors.canvas,
       surfaceTintColor: Colors.transparent,
@@ -44,7 +47,7 @@ ThemeData qyLightTheme() {
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(QyTokens.radiusLg),
+        borderRadius: BorderRadius.circular(QyTokens.radiusCard),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(

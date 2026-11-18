@@ -5,14 +5,16 @@
 ## 1. 设计基调
 
 - 关键词：纯白 · 钢青蓝灰 · 彩色图标 · 玻璃面质感
-- **页面背景以纯白为基调**；Tab 外壳通过 `QyPageBackground` 叠加近乎不可见的冷调光晕（`#F8FBFD → #FCFDFE → #FFFFFF`），为玻璃面组件提供明度过渡，纯装饰、不遮挡内容
+- **页面背景为纯白不透明底**；Tab 外壳通过 `QyPageBackground` 统一兜底（纯白 `ColoredBox`），不再叠加任何冷调渐变。早期版本的「空气层」光晕在真机上会让页面顶部出现整片淡蓝雾感，已移除；卡片只靠极淡描边与柔投影浮起
 - 主色钢青蓝灰，近黑文字 + 冷灰次级文字
 - 功能图标统一为「彩色圆角浅底 + 同族深色描边图形」（`QyTintedIcon`）
 - **玻璃面体系**：`QyFrost` 统一入口——
   - **玻璃面模式**（`backdrop: false`，全 App 当前唯一启用）：90% 半透明白 + 细描边 + 柔投影，**无模糊层**，内容 100% 清晰。用于卡片、列表项、空状态、分类胶囊等承载内容的组件；
   - **真磨砂模式**（`backdrop: true`，当前禁用）：玻璃面下叠加 `BackdropFilter` 高斯模糊，透出并虚化背后的滚动内容。原设计仅用于应用栏、底部导航、Toast 浮层等悬浮于内容之上的栏体。
 - **当前实现状态（以代码为准）**：`QyFrost.realBlurEnabled` 全局关闭，且 AppBar / 底部导航 / Toast 的调用点已统一改为 `backdrop: false`，运行时不创建任何 `BackdropFilter`；总开关仅作兜底。原因是部分 Android 设备上模糊区域会异常扩大并泄漏到整页（v0.1.2 已复发一次，`RepaintBoundary` 不足以兜底）。重新启用前须完成多机型真机回归验证，并同步修改本节说明，避免再次出现"文档说可用、代码却已全局禁用"的偏差。
-- **首页结构**（对齐高保真设计稿）：品牌抬头（轻云 + 搜索/通知）→ 问候语 → 横向概览卡轮播（最近照片 / 存储空间 / 传输任务，3 页 + 小圆点）→ 分类胶囊（相册/文件/视频/分类 + 已同步状态点）→ 最近文件扁平列表（细分割线，无卡片底）。底部导航为纯白玻璃面，首页选中态为主色实心圆徽标。
+- **首页结构**（对齐高保真设计稿）：品牌抬头（轻云 + 圆形浅底搜索/通知）→ 问候语 → 横向概览卡轮播（最近照片 / 存储空间 / 传输任务，3 页 + 胶囊指示器）→ 分类胶囊（相册/文件/视频/分类 + 已同步状态点，选中块在槽位间滑动）→ 最近文件扁平列表（浅底圆角图标 + 细分割线）。概览卡大数字使用 `FittedBox(scaleDown)` 固定单行，杜绝「8.2」折行；底部导航为纯白玻璃面，选中态为主色实心圆**承载白色图标**（不是孤立圆点）。
+- **动效规范（全局）**：页面转场由 `QyPageTransitionsBuilder` 统一接管（淡入 + 轻微上滑 + 微缩放，`easeOutCubic`，无灰色 scrim）；M3 默认 `InkSparkle` 圆润波纹；首页各区块按 `qyEntranceStep` 交错淡入上滑；卡片 / 列表行 / 胶囊按压统一走 `QyTapScale` 缩放回弹；分类高亮、指示器宽度、导航选中态圆底与文字颜色均带动画。所有曲线统一 `easeOutCubic`。
+- **导航约束**：`/home`、`/files`、`/transfers`、`/profile` 属于 `StatefulShellRoute` 分支，业务内切换一律用 `context.go`（首页「分类」「传输概览」已按此实现）；`push` 会在 shell 之上叠一个页面实例，仅演示中心这类需要独立返回栈的入口使用。因此**所有页面根节点必须自带纯白不透明底**，即使被 push 也不会在转场途中透出下层内容、形成灰色浮层。
 
 ## 2. 色彩（QyColors）
 
@@ -37,13 +39,15 @@
 | Token | 值 |
 | --- | --- |
 | 按钮高度 | **52** |
-| 卡片圆角 | **20**（radiusLg） |
+| 卡片圆角 | **26**（radiusCard） |
 | 底部导航高 | **84**（navHeight） |
 | 输入框/大圆角 | 24（radiusXl） |
-| 列表项圆角 | 16（radiusMd） |
+| 列表项圆角 | 20（radiusLg） |
 | 间距阶梯 | 4 / 8 / 12 / 16 / 20 / 24 / 32 |
 
-阴影：`softShadow = 8% 冷灰蓝，offset (0, 4)，blur 16，spread -2`；卡片加重版 offset (0, 6)、blur 20、spread -4。
+阴影：`softShadow = 8% 冷灰蓝，offset (0, 4)，blur 16，spread -2`；列表项沿用；卡片专用 `cardShadowSoft`：offset (0, 10)、blur 30、spread -10，更轻更柔。
+
+动效时长：`shortMotion` 200ms、`mediumMotion` 320ms、`entranceMotion` 460ms，交错步长 70ms。
 
 ## 4. 字体（qyTextTheme）
 
@@ -67,16 +71,18 @@
 | --- | --- |
 | `QyIcon` | 40 个内联 SVG 图标（`QyIcons` 常量），无需资源文件 |
 | `QyFrost` / `QyFrostAppBar` | 玻璃面容器（真磨砂模式已禁用）/ 玻璃面应用栏 |
-| `QyPageBackground` | 全局页面背景：白底 + 顶部极淡冷调光晕（Tab 外壳统一包裹） |
+| `QyPageBackground` | 全局纯白不透明底（Tab 外壳统一包裹，兼作透明兜底） |
+| `QyPageTransitionsBuilder` | 全局圆润页面转场（淡入 + 上滑 + 微缩放），在 `qyLightTheme()` 中注册 |
+| `QyTapScale` | 统一按压回弹：按下缩至 0.955，松手弹回 |
 | `QyTintedIcon` / `QyTintedIconCircle` | 彩色图标：圆角浅色底 + 同族深色图形（`QyHues` 九色族） |
 | `QyButton` | 四态：primary（蓝灰底白字）/ secondary / outline / disabled，高 52 胶囊 |
-| `QyCard` | 玻璃面卡片（90% 白 + 细描边 + 浅色投影），圆角 20；`color` 可传 `surfaceSoft` |
-| `QyListTile` | 64 高文件列表项（图标 + 标题 + 副标题 + trailing） |
+| `QyCard` | 玻璃面卡片（90% 白 + 极淡描边 + 柔投影），圆角 26；`color` 可传 `surfaceSoft` |
+| `QyListTile` | 68 高文件列表项（图标 + 标题 + 副标题 + trailing），圆角 20 |
 | `QyProgressBar` | 6 高胶囊进度条（可调高度），主色轨道 |
-| `QyBottomNav` | 纯白玻璃面底部导航（首页/文件/传输/我的），首页选中态主色实心圆 + 底部小圆点 |
+| `QyBottomNav` | 纯白玻璃面底部导航（首页/文件/传输/我的），选中态主色圆底承载白色图标 + 底部小圆点 |
 | `QyEmptyState` | 空状态（图标 + 标题 + 描述 + 可选按钮） |
 | `showQyToast` | 顶部 Overlay Toast（成功/失败两种） |
-| `qyLightTheme()` | MaterialApp 主题（Material 3） |
+| `qyLightTheme()` | MaterialApp 主题（Material 3 + 全局转场 + InkSparkle 波纹） |
 | `QyRoutes` | 12 个场景路由常量 |
 
 ## 6. 场景与路由（12 个）
