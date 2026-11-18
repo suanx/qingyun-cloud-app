@@ -30,19 +30,19 @@ class QyButton extends StatelessWidget {
     switch (variant) {
       case QyButtonVariant.primary:
         background = QyColors.primary;
-        foreground = QyColors.ink;
+        foreground = QyColors.onDark;
         side = null;
       case QyButtonVariant.secondary:
         background = QyColors.primaryLight;
-        foreground = const Color(0xFF6B5A2A);
+        foreground = QyColors.primaryDeep;
         side = null;
       case QyButtonVariant.outline:
         background = Colors.transparent;
         foreground = QyColors.sub;
         side = const BorderSide(color: QyColors.border, width: 1.5);
       case QyButtonVariant.disabled:
-        background = const Color(0xFFF3EFE4);
-        foreground = const Color(0xFFBDB5A3);
+        background = const Color(0xFFEEF1F4);
+        foreground = const Color(0xFFB9C1C8);
         side = null;
     }
 

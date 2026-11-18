@@ -5,8 +5,8 @@ class QyProgressBar extends StatelessWidget {
   const QyProgressBar({
     super.key,
     required this.value,
-    this.color = QyColors.primaryDeep,
-    this.backgroundColor = const Color(0xFFF3DFA8),
+    this.color = QyColors.primary,
+    this.backgroundColor = const Color(0xFFE8EEF2),
     this.height = 6,
   });
 

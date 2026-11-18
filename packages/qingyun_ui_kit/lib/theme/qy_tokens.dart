@@ -11,14 +11,14 @@ abstract final class QyTokens {
   static const double spaceXxxl = 32;
 
   static const double radiusSm = 12;
-  static const double radiusMd = 18;
-  static const double radiusLg = 22;
-  static const double radiusXl = 26;
+  static const double radiusMd = 16;
+  static const double radiusLg = 20;
+  static const double radiusXl = 24;
   static const double radiusPill = 999;
 
   static const double buttonHeight = 52;
   static const double statusBarHeight = 62;
-  static const double navHeight = 95;
+  static const double navHeight = 84;
   static const double navPillHeight = 62;
 
   static const Duration shortMotion = Duration(milliseconds: 180);
@@ -27,15 +27,15 @@ abstract final class QyTokens {
 
   static BoxShadow softShadow(Color color) => BoxShadow(
         color: color,
-        offset: const Offset(0, 6),
-        blurRadius: 18,
-        spreadRadius: -4,
+        offset: const Offset(0, 4),
+        blurRadius: 16,
+        spreadRadius: -2,
       );
 
   static BoxShadow cardShadow(Color color) => BoxShadow(
         color: color,
-        offset: const Offset(0, 8),
-        blurRadius: 24,
-        spreadRadius: -6,
+        offset: const Offset(0, 6),
+        blurRadius: 20,
+        spreadRadius: -4,
       );
 }

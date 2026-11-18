@@ -112,7 +112,7 @@ class _TransferCard extends StatelessWidget {
               QyIcon(
                 task.direction == TransferDirection.upload ? QyIcons.upload : QyIcons.download,
                 size: 20,
-                color: QyColors.primaryDeep,
+                color: task.direction == TransferDirection.upload ? QyColors.sky : QyColors.mint,
               ),
               const SizedBox(width: 8),
               Expanded(child: Text(task.name, style: textTheme.bodyLarge)),

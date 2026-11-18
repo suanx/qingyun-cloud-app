@@ -53,20 +53,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // 用户信息卡片
           QyCard(
-            gradient: QyColors.primaryGradient,
             child: Row(
               children: <Widget>[
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: QyColors.surface,
-                    shape: BoxShape.circle,
-                    boxShadow: <BoxShadow>[QyTokens.softShadow(QyColors.warmShadow)],
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(14),
-                    child: QyIcon(QyIcons.user, size: 28, color: QyColors.primaryDeep),
-                  ),
-                ),
+                const QyTintedIconCircle(QyIcons.user, hue: QyHues.slate, size: 52),
                 const SizedBox(width: QyTokens.spaceMd),
                 Expanded(
                   child: Column(
@@ -89,14 +78,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // 云端空间卡片（自首页迁入，展示在用户信息下方）
           QyCard(
-            gradient: QyColors.primaryGradient,
+            color: QyColors.surfaceSoft,
             onTap: () => context.push(QyRoutes.storage),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    const QyIcon(QyIcons.cloud, size: 20, color: QyColors.primaryDeep),
+                    const QyIcon(QyIcons.cloud, size: 20, color: QyColors.primary),
                     const SizedBox(width: 8),
                     Text('云端空间', style: textTheme.bodyLarge),
                     const Spacer(),
@@ -117,13 +106,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           QyCard(
             child: Column(
               children: <Widget>[
-                _MenuRow(icon: QyIcons.play, label: '功能演示（全量）', onTap: () => context.push(AppRouter.demo)),
+                _MenuRow(icon: QyIcons.play, hue: QyHues.purple, label: '功能演示（全量）', onTap: () => context.push(AppRouter.demo)),
                 const Divider(color: QyColors.divider, height: 1),
-                _MenuRow(icon: QyIcons.chart, label: '容量管理', onTap: () => context.push(QyRoutes.storage)),
+                _MenuRow(icon: QyIcons.chart, hue: QyHues.blue, label: '容量管理', onTap: () => context.push(QyRoutes.storage)),
                 const Divider(color: QyColors.divider, height: 1),
-                _MenuRow(icon: QyIcons.trash, label: '回收站', onTap: () => context.push(QyRoutes.trash)),
+                _MenuRow(icon: QyIcons.trash, hue: QyHues.coral, label: '回收站', onTap: () => context.push(QyRoutes.trash)),
                 const Divider(color: QyColors.divider, height: 1),
-                _MenuRow(icon: QyIcons.star, label: '收藏文件', onTap: () => showQyToast(context, '收藏功能开发中')),
+                _MenuRow(icon: QyIcons.star, hue: QyHues.gold, label: '收藏文件', onTap: () => showQyToast(context, '收藏功能开发中')),
               ],
             ),
           ),
@@ -133,11 +122,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           QyCard(
             child: Column(
               children: <Widget>[
-                _MenuRow(icon: QyIcons.settings, label: '通用设置', onTap: () => showQyToast(context, '设置功能开发中')),
+                _MenuRow(icon: QyIcons.settings, hue: QyHues.slate, label: '通用设置', onTap: () => showQyToast(context, '设置功能开发中')),
                 const Divider(color: QyColors.divider, height: 1),
-                _MenuRow(icon: QyIcons.lock, label: '账号与安全', onTap: () => showQyToast(context, '安全中心开发中')),
+                _MenuRow(icon: QyIcons.lock, hue: QyHues.teal, label: '账号与安全', onTap: () => showQyToast(context, '安全中心开发中')),
                 const Divider(color: QyColors.divider, height: 1),
-                _MenuRow(icon: QyIcons.info, label: '关于轻云', onTap: () => showQyToast(context, '轻云 v0.1.0')),
+                _MenuRow(icon: QyIcons.info, hue: QyHues.green, label: '关于轻云', onTap: () => showQyToast(context, '轻云 v0.1.0')),
               ],
             ),
           ),
@@ -149,22 +138,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.icon, required this.label, required this.onTap});
+  const _MenuRow({
+    required this.icon,
+    required this.hue,
+    required this.label,
+    required this.onTap,
+  });
 
   final String icon;
+  final QyIconHue hue;
   final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: 56,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(QyTokens.radiusSm),
         child: Row(
           children: <Widget>[
-            QyIcon(icon, size: 20, color: QyColors.primaryDeep),
+            QyTintedIcon(icon, hue: hue, size: 34),
             const SizedBox(width: 12),
             Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyLarge)),
             const QyIcon(QyIcons.back, size: 16, color: QyColors.muted),

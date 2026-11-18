@@ -22,7 +22,7 @@ class FilesBrowserScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text(title, style: Theme.of(context).textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),

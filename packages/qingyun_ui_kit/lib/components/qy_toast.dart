@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/qy_colors.dart';
 import '../theme/qy_tokens.dart';
+import 'qy_frost.dart';
 import 'qy_icon.dart';
 
 void showQyToast(
@@ -60,11 +61,12 @@ class _QyToastBodyState extends State<_QyToastBody> {
         opacity: _visible ? 1 : 0,
         duration: QyTokens.shortMotion,
         child: IgnorePointer(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: QyColors.ink,
-              borderRadius: BorderRadius.circular(QyTokens.radiusLg),
-            ),
+          child: QyFrost(
+            color: QyColors.frostDark,
+            blur: 16,
+            showBorder: false,
+            borderRadius: BorderRadius.circular(QyTokens.radiusLg),
+            shadows: <BoxShadow>[QyTokens.cardShadow(const Color(0x3320262B))],
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(

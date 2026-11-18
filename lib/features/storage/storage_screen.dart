@@ -50,7 +50,7 @@ class _StorageScreenState extends State<StorageScreen> {
 
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text('容量管理', style: textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),
@@ -67,7 +67,7 @@ class _StorageScreenState extends State<StorageScreen> {
                 padding: const EdgeInsets.all(20),
                 children: <Widget>[
                   QyCard(
-                    gradient: QyColors.primaryGradient,
+                    color: QyColors.surfaceSoft,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[

@@ -28,7 +28,7 @@ abstract final class DemoRegistry {
     (
       groupScenes,
       <DemoCase>[
-        DemoCase(title: '启动页', description: '暖黄渐变 + 品牌标识，停顿后自动进入首页', route: QyRoutes.splash),
+        DemoCase(title: '启动页', description: '纯白背景 + 品牌标识，停顿后自动进入首页', route: QyRoutes.splash),
         DemoCase(title: '首页', description: '功能入口（相册/文件/视频/同步/分类）、最近文件、下拉刷新', route: QyRoutes.home),
         DemoCase(title: '文件分类与列表', description: '分类 chips 过滤 + 文件列表 + 空状态', route: QyRoutes.files),
         DemoCase(title: '传输任务', description: '上传/下载任务进度、暂停/继续切换', route: QyRoutes.transfers),
@@ -72,7 +72,7 @@ class DemoGalleryScreen extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text('功能演示', style: textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),
@@ -83,7 +83,7 @@ class DemoGalleryScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: <Widget>[
           QyCard(
-            gradient: QyColors.primaryGradient,
+            color: QyColors.surfaceSoft,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[

@@ -4,42 +4,42 @@
 
 ## 1. 设计基调
 
-- 关键词：淡黄 · 柔和渐变 · 年轻化
-- **全案无紫色**
-- 主色暖黄、米白画布、深棕墨色文字
+- 关键词：纯白 · 钢青蓝灰 · 彩色图标 · 磨砂玻璃
+- **所有页面背景纯白**，不使用渐变与装饰底纹
+- 主色钢青蓝灰，近黑文字 + 冷灰次级文字
+- 功能图标统一为「彩色圆角浅底 + 同族深色描边图形」（`QyTintedIcon`）
+- **全局磨砂玻璃质感**：`QyFrost`（BackdropFilter 高斯模糊 + 半透明面 + 细描边），应用于卡片、列表项、应用栏、底部导航、分类胶囊、Toast 等全部容器
 
 ## 2. 色彩（QyColors）
 
 | Token | 值 | 用途 |
 | --- | --- | --- |
-| `primary` | `#FFC94A` | 主色（按钮、选中态、进度） |
-| `primaryDeep` | `#F5A623` | 主色加深（图标、强调） |
-| `primaryLight` | `#FFF0BF` | 浅主色（次级按钮、输入框填充） |
-| `canvas` | `#FFF8E7` | 全局背景 |
+| `primary` | `#4A7386` | 主色（按钮、选中态、进度） |
+| `primaryDeep` | `#39596A` | 主色加深（强调） |
+| `primaryLight` | `#E3EDF2` | 浅主色（次级按钮、彩色图标底） |
+| `canvas` | `#FFFFFF` | 全局背景（纯白） |
 | `surface` | `#FFFFFF` | 卡片/导航面 |
-| `surfaceSoft` | `#FFF6DE` | 空状态底 |
-| `coral` / `mint` / `sky` | `#FF9F7A` / `#7FD1B9` / `#8EC5E8` | 分类点缀色 |
-| `ink` | `#2E2A22` | 主文字 |
-| `sub` | `#7C7566` | 次级文字 |
-| `muted` | `#A9A08C` | 弱化文字/图标 |
-| `border` / `divider` | `#F2E7CC` / `#F5EFE0` | 描边/分割 |
-| `success` / `error` | `#49B58C` / `#E96A5B` | 成功/失败 |
-| `warmShadow` | `#1FB78A2E`（12% 暖黄） | 统一阴影色 |
-
-渐变：`warmGradient = [#FFD86B, #FFEBAF, #FFF6DC]`，`primaryGradient = [#FFF0BF, #FFF6DC]`。
+| `surfaceSoft` | `#F4F7F9` | 浅灰蓝卡片底（强调卡片、输入框填充） |
+| `sky` / `mint` / `violet` / `gold` / `coral` / `leaf` | `#4E8FD9` / `#2FB5A3` / `#8B7CD8` / `#D9A441` / `#E96A5B` / `#43AE7C` | 彩色图标色族 |
+| `ink` | `#20262B` | 主文字 |
+| `sub` | `#8B959E` | 次级文字 |
+| `muted` | `#B7BFC6` | 弱化文字/图标 |
+| `border` / `divider` | `#E9EDF0` / `#F1F4F6` | 描边/分割 |
+| `success` / `error` | `#43AE7C` / `#E96A5B` | 成功/失败 |
+| `softShadow` | `#14809AAB`（8% 冷灰蓝） | 统一阴影色 |
 
 ## 3. 尺寸与形状（QyTokens）
 
 | Token | 值 |
 | --- | --- |
 | 按钮高度 | **52** |
-| 卡片圆角 | **22**（radiusLg） |
-| 胶囊导航高 | **62**（navPillHeight，外框总高 95 = navHeight） |
-| 输入框/大圆角 | 26（radiusXl） |
-| 列表项圆角 | 18（radiusMd） |
+| 卡片圆角 | **20**（radiusLg） |
+| 底部导航高 | **84**（navHeight） |
+| 输入框/大圆角 | 24（radiusXl） |
+| 列表项圆角 | 16（radiusMd） |
 | 间距阶梯 | 4 / 8 / 12 / 16 / 20 / 24 / 32 |
 
-阴影：`softShadow = 12% 暖黄，offset (0, 6)，blur 18，spread -4`；卡片加重版 offset (0, 8)、blur 24、spread -6。
+阴影：`softShadow = 8% 冷灰蓝，offset (0, 4)，blur 16，spread -2`；卡片加重版 offset (0, 6)、blur 20、spread -4。
 
 ## 4. 字体（qyTextTheme）
 
@@ -62,11 +62,13 @@
 | 组件 | 说明 |
 | --- | --- |
 | `QyIcon` | 40 个内联 SVG 图标（`QyIcons` 常量），无需资源文件 |
-| `QyButton` | 四态：primary / secondary / outline / disabled，高 52 胶囊 |
-| `QyCard` | 白底圆角 22 卡片，可传 `gradient`，默认暖黄投影 |
+| `QyFrost` / `QyFrostAppBar` | 磨砂玻璃容器 / 磨砂应用栏（BackdropFilter + 半透明面） |
+| `QyTintedIcon` / `QyTintedIconCircle` | 彩色图标：圆角浅色底 + 同族深色图形（`QyHues` 九色族） |
+| `QyButton` | 四态：primary（蓝灰底白字）/ secondary / outline / disabled，高 52 胶囊 |
+| `QyCard` | 白底圆角 20 卡片 + 细描边 + 浅色投影；`color` 可传 `surfaceSoft` |
 | `QyListTile` | 64 高文件列表项（图标 + 标题 + 副标题 + trailing） |
-| `QyProgressBar` | 6 高胶囊进度条（可调高度） |
-| `QyBottomNav` | 底部胶囊导航（首页/文件/传输/我的），active 填充主色 |
+| `QyProgressBar` | 6 高胶囊进度条（可调高度），主色轨道 |
+| `QyBottomNav` | 纯白底部导航（首页/文件/传输/我的），选中态主色 + 底部小圆点 |
 | `QyEmptyState` | 空状态（图标 + 标题 + 描述 + 可选按钮） |
 | `showQyToast` | 顶部 Overlay Toast（成功/失败两种） |
 | `qyLightTheme()` | MaterialApp 主题（Material 3） |
@@ -94,4 +96,6 @@
 ## 7. 图标体系
 
 - 图标名常量：`QyIcons`（cloud/home/folder/transfer/user/search/upload/download/share/trash/… 共 40 个）
-- SVG 路径内置于 `QyIconPaths`，通过 `QyIcon(name, size, color)` 渲染，颜色自动替换描边色。
+- SVG 路径内置于 `QyIconPaths`，通过 `QyIcon(name, size, color)` 渲染，颜色自动替换描边色
+- 彩色图标：`QyTintedIcon(icon, hue: QyHues.blue, size: 44)` —— 浅色圆角底 + 深色描边图形；功能入口、菜单、设置项等统一使用
+- 文件分类色：图片=蓝 `sky`、文档=金 `gold`、视频=紫 `violet`、音乐=青 `mint`、压缩包=珊瑚 `coral`

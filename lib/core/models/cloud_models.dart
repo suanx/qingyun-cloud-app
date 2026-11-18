@@ -25,11 +25,11 @@ extension FileCategoryX on FileCategory {
       };
 
   Color get tint => switch (this) {
-        FileCategory.image => QyColors.coral,
-        FileCategory.doc => QyColors.sky,
-        FileCategory.video => QyColors.mint,
-        FileCategory.music => QyColors.primaryDeep,
-        FileCategory.zip => const Color(0xFF6B5A2A),
+        FileCategory.image => QyColors.sky,
+        FileCategory.doc => QyColors.gold,
+        FileCategory.video => QyColors.violet,
+        FileCategory.music => QyColors.mint,
+        FileCategory.zip => QyColors.coral,
         FileCategory.all || FileCategory.other => QyColors.sub,
       };
 }

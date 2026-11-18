@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../theme/qy_colors.dart';
 import '../theme/qy_tokens.dart';
+import 'qy_frost.dart';
 
+/// 磨砂玻璃卡片：半透明白玻璃面 + 背景模糊 + 细描边 + 浅色投影。
 class QyCard extends StatelessWidget {
   const QyCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.gradient,
     this.color = QyColors.surface,
     this.elevated = true,
     this.onTap,
@@ -15,24 +16,21 @@ class QyCard extends StatelessWidget {
 
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final List<Color>? gradient;
+
+  /// 玻璃底色：默认白色玻璃；传入其他颜色时以 86% 不透明度呈现彩色玻璃。
   final Color color;
   final bool elevated;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final decoration = BoxDecoration(
-      color: gradient == null ? color : null,
-      gradient: gradient == null
-          ? null
-          : LinearGradient(colors: gradient!, begin: Alignment.topLeft, end: Alignment.bottomRight),
+    // ignore: deprecated_member_use
+    final glass = color == QyColors.surface ? QyColors.frost : color.withOpacity(0.86);
+    return QyFrost(
       borderRadius: BorderRadius.circular(QyTokens.radiusLg),
-      boxShadow: elevated ? <BoxShadow>[QyTokens.softShadow(QyColors.warmShadow)] : null,
-    );
-
-    return DecoratedBox(
-      decoration: decoration,
+      color: glass,
+      blur: 14,
+      shadows: elevated ? <BoxShadow>[QyTokens.softShadow(QyColors.softShadow)] : null,
       child: Material(
         color: Colors.transparent,
         child: InkWell(

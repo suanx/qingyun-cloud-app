@@ -62,23 +62,36 @@ class _FilesScreenState extends State<FilesScreen> {
             const SizedBox(height: 12),
           ],
           SizedBox(
-            height: 40,
+            height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: <Widget>[
-                for (final category in categories)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _CategoryChip(
-                      label: category.label,
-                      selected: category == _category,
-                      onTap: () {
-                        setState(() => _category = category);
-                        _load();
-                      },
+                QyFrost(
+                  color: QyColors.frost,
+                  blur: 14,
+                  borderRadius: BorderRadius.circular(QyTokens.radiusPill),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        for (final category in categories)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 2),
+                            child: _CategoryChip(
+                              label: category.label,
+                              selected: category == _category,
+                              onTap: () {
+                                setState(() => _category = category);
+                                _load();
+                              },
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -136,19 +149,19 @@ class _CategoryChip extends StatelessWidget {
     return AnimatedContainer(
       duration: QyTokens.shortMotion,
       child: Material(
-        color: selected ? QyColors.primary : QyColors.surface,
+        color: selected ? QyColors.ink : Colors.transparent,
         borderRadius: BorderRadius.circular(QyTokens.radiusPill),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(QyTokens.radiusPill),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? QyColors.ink : QyColors.sub,
+                color: selected ? QyColors.onDark : QyColors.sub,
               ),
             ),
           ),

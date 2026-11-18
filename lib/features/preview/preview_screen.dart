@@ -12,7 +12,7 @@ class PreviewScreen extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text('预览', style: textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),
@@ -38,17 +38,7 @@ class PreviewScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: QyColors.surface,
-                        shape: BoxShape.circle,
-                        boxShadow: <BoxShadow>[QyTokens.softShadow(QyColors.warmShadow)],
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.all(32),
-                        child: QyIcon(QyIcons.image, size: 64, color: QyColors.coral),
-                      ),
-                    ),
+                    const QyTintedIcon(QyIcons.image, hue: QyHues.blue, size: 96),
                     const SizedBox(height: QyTokens.spaceXl),
                     Text('海边日落.JPG', style: textTheme.titleLarge),
                     const SizedBox(height: QyTokens.spaceSm),
@@ -61,7 +51,7 @@ class PreviewScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: QyButton(
                 '下载到本机',
-                icon: const QyIcon(QyIcons.download, size: 20, color: QyColors.ink),
+                icon: const QyIcon(QyIcons.download, size: 20, color: QyColors.onDark),
                 onPressed: () => showQyToast(
                   context,
                   '下载接口：${ApiEndpoints.fileDownload('f1')}',

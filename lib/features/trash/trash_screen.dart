@@ -42,7 +42,7 @@ class _TrashScreenState extends State<TrashScreen> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text('回收站', style: textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),

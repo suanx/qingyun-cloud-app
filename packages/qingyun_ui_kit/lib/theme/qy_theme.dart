@@ -6,16 +6,16 @@ import 'qy_typography.dart';
 ThemeData qyLightTheme() {
   const scheme = ColorScheme.light(
     primary: QyColors.primary,
-    onPrimary: QyColors.ink,
+    onPrimary: QyColors.onDark,
     primaryContainer: QyColors.primaryLight,
-    onPrimaryContainer: QyColors.ink,
-    secondary: QyColors.coral,
-    onSecondary: QyColors.ink,
-    secondaryContainer: QyColors.mint,
-    onSecondaryContainer: QyColors.ink,
+    onPrimaryContainer: QyColors.primaryDeep,
+    secondary: QyColors.mint,
+    onSecondary: QyColors.onDark,
+    secondaryContainer: QyColors.primaryLight,
+    onSecondaryContainer: QyColors.primaryDeep,
     tertiary: QyColors.sky,
-    onTertiary: QyColors.ink,
-    surface: QyColors.canvas,
+    onTertiary: QyColors.onDark,
+    surface: QyColors.surface,
     onSurface: QyColors.ink,
     onSurfaceVariant: QyColors.sub,
     outline: QyColors.border,
@@ -50,7 +50,7 @@ ThemeData qyLightTheme() {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: QyColors.primary,
-        foregroundColor: QyColors.ink,
+        foregroundColor: QyColors.onDark,
         elevation: 0,
         minimumSize: const Size.fromHeight(QyTokens.buttonHeight),
         shape: const StadiumBorder(),
@@ -67,7 +67,7 @@ ThemeData qyLightTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: QyColors.primaryLight,
+      fillColor: QyColors.surfaceSoft,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(QyTokens.radiusXl),
@@ -79,7 +79,7 @@ ThemeData qyLightTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(QyTokens.radiusXl),
-        borderSide: const BorderSide(color: QyColors.primaryDeep, width: 1.5),
+        borderSide: const BorderSide(color: QyColors.primary, width: 1.5),
       ),
     ),
   );

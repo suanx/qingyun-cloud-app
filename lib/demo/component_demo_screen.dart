@@ -10,7 +10,7 @@ class ComponentDemoScreen extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text('组件演示', style: textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),
@@ -43,15 +43,15 @@ class ComponentDemoScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const QyButton('禁用按钮', variant: QyButtonVariant.disabled),
 
-          _section(context, 'QyCard · 常规与渐变'),
+          _section(context, 'QyCard · 常规与浅色'),
           QyCard(
             onTap: () => showQyToast(context, '卡片点击'),
-            child: Text('常规白卡 · 圆角 22 · 暖黄投影', style: textTheme.bodyLarge),
+            child: Text('磨砂玻璃卡 · 圆角 20 · 背景模糊', style: textTheme.bodyLarge),
           ),
           const SizedBox(height: 12),
           const QyCard(
-            gradient: QyColors.primaryGradient,
-            child: Text('渐变卡片 · primaryGradient', style: TextStyle(color: QyColors.ink)),
+            color: QyColors.surfaceSoft,
+            child: Text('浅色卡片 · surfaceSoft', style: TextStyle(color: QyColors.ink)),
           ),
 
           _section(context, 'QyProgressBar · 边界值自动收敛'),

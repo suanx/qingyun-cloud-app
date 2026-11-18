@@ -40,7 +40,7 @@ class _QyGalleryScreenState extends State<QyGalleryScreen> {
             children: <Widget>[
               Text('轻云 UI Kit', style: textTheme.headlineLarge),
               const SizedBox(height: 4),
-              Text('淡黄 · 柔和渐变 · 年轻化', style: textTheme.bodyMedium),
+              Text('纯白 · 钢青蓝灰 · 彩色图标', style: textTheme.bodyMedium),
               const SizedBox(height: 24),
 
               Text('按钮', style: textTheme.titleLarge),
@@ -55,7 +55,7 @@ class _QyGalleryScreenState extends State<QyGalleryScreen> {
               Text('卡片与进度', style: textTheme.titleLarge),
               const SizedBox(height: 12),
               QyCard(
-                gradient: QyColors.primaryGradient,
+                color: QyColors.surfaceSoft,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[

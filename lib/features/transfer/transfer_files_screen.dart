@@ -59,7 +59,7 @@ class _TransferFilesScreenState extends State<TransferFilesScreen> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text('上传 / 下载', style: textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),
@@ -75,13 +75,13 @@ class _TransferFilesScreenState extends State<TransferFilesScreen> {
             const SizedBox(height: QyTokens.spaceLg),
             QyButton(
               '上传文件',
-              icon: const QyIcon(QyIcons.upload, size: 20, color: QyColors.ink),
+              icon: const QyIcon(QyIcons.upload, size: 20, color: QyColors.onDark),
               onPressed: _uploading ? null : () => _runTask(isUpload: true),
             ),
             const SizedBox(height: QyTokens.spaceMd),
             QyButton(
               '下载文件',
-              icon: const QyIcon(QyIcons.download, size: 20, color: QyColors.ink),
+              icon: const QyIcon(QyIcons.download, size: 20, color: QyColors.primaryDeep),
               variant: QyButtonVariant.secondary,
               onPressed: _downloading ? null : () => _runTask(isUpload: false),
             ),
@@ -128,7 +128,11 @@ class _TaskProgressCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const QyIcon(QyIcons.transfer, size: 20, color: QyColors.primaryDeep),
+              QyIcon(
+                QyIcons.transfer,
+                size: 20,
+                color: QyColors.sky,
+              ),
               const SizedBox(width: 8),
               Expanded(child: Text(title, style: textTheme.bodyLarge)),
               Text(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/qy_colors.dart';
 import '../theme/qy_tokens.dart';
+import 'qy_frost.dart';
 import 'qy_icon.dart';
 
 class QyBottomNavItem {
@@ -17,6 +18,7 @@ const List<QyBottomNavItem> qyDefaultNavItems = <QyBottomNavItem>[
   QyBottomNavItem(label: '我的', icon: QyIcons.user),
 ];
 
+/// 底部导航：磨砂玻璃面 + 顶部细分隔线；选中项为主色图标/文字 + 底部小圆点。
 class QyBottomNav extends StatelessWidget {
   const QyBottomNav({
     super.key,
@@ -31,28 +33,30 @@ class QyBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: QyTokens.navHeight,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 12, left: 21, right: 21, bottom: 21),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: QyColors.surface,
-            borderRadius: BorderRadius.circular(36),
-            border: Border.all(color: QyColors.border, width: 1),
-            boxShadow: <BoxShadow>[QyTokens.softShadow(QyColors.warmShadow)],
-          ),
-          child: Row(
-            children: <Widget>[
-              for (var i = 0; i < items.length; i++)
-                Expanded(
-                  child: _NavItem(
-                    item: items[i],
-                    active: i == currentIndex,
-                    onTap: () => onChanged(i),
+    return QyFrost(
+      color: QyColors.frostStrong,
+      blur: 20,
+      showBorder: false,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: QyColors.divider, width: 1)),
+        ),
+        child: SizedBox(
+          height: QyTokens.navHeight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 18),
+            child: Row(
+              children: <Widget>[
+                for (var i = 0; i < items.length; i++)
+                  Expanded(
+                    child: _NavItem(
+                      item: items[i],
+                      active: i == currentIndex,
+                      onTap: () => onChanged(i),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -69,31 +73,34 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? QyColors.ink : QyColors.muted;
-    return AnimatedContainer(
-      duration: QyTokens.shortMotion,
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-      decoration: BoxDecoration(
-        color: active ? QyColors.primary : Colors.transparent,
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(26),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              QyIcon(item.icon, size: 18, color: color),
-              const SizedBox(height: 4),
-              Text(
-                item.label,
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: color),
-              ),
-            ],
+    final color = active ? QyColors.primary : QyColors.muted;
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          QyIcon(item.icon, size: 22, color: color),
+          const SizedBox(height: 4),
+          Text(
+            item.label,
+            style: TextStyle(
+              fontSize: 11,
+              height: 1,
+              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+              color: color,
+            ),
           ),
-        ),
+          const SizedBox(height: 4),
+          AnimatedContainer(
+            duration: QyTokens.shortMotion,
+            width: 4,
+            height: 4,
+            decoration: BoxDecoration(
+              color: active ? QyColors.primary : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
       ),
     );
   }

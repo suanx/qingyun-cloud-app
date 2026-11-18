@@ -20,12 +20,12 @@
                         <subviews>
                             <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="轻云" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="GJd-Yh-RWb">
                                 <rect key="frame" x="0.0" y="428" width="414" height="40"/>
-                                <color key="tintColor" red="0.180392156862745" green="0.164705882352941" blue="0.133333333333333" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <color key="tintColor" red="0.290196078431373" green="0.450980392156863" blue="0.525490196078431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <fontDescription key="fontDescription" type="boldSystem" pointSize="34"/>
                                 <nil key="highlightedColor"/>
                             </label>
                         </subviews>
-                        <color key="backgroundColor" red="1" green="0.972549019607843" blue="0.905882352941176" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="GJd-Yh-RWb" firstAttribute="centerY" secondItem="5EZ-qb-Rvc" secondAttribute="centerY" id="2gS-Gg-UeJ"/>
                             <constraint firstAttribute="trailing" secondItem="GJd-Yh-RWb" secondAttribute="trailing" id="8bg-qX-aPU"/>

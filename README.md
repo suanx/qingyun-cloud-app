@@ -13,7 +13,7 @@
 | 网络 | `dio ^5` | 统一 envelop 解析、Bearer 鉴权、错误映射 |
 | CI | GitHub Actions | `android-build` / `ios-build` / `release` 三条工作流 |
 
-设计基调：暖黄 `#FFC94A`、米白背景 `#FFF8E7`、全案无紫色；按钮高 52、卡片圆角 22、胶囊导航高 62、12% 暖黄柔和阴影。详见 `docs/DESIGN_SPEC.md`。
+设计基调：纯白背景 `#FFFFFF`、钢青蓝灰主色 `#4A7386`、彩色图标体系（`QyTintedIcon` 九色族）；全局磨砂玻璃质感（`QyFrost`：背景高斯模糊 + 半透明面 + 细描边），按钮高 52、卡片圆角 20、底部导航高 84、8% 冷灰蓝柔和阴影。详见 `docs/DESIGN_SPEC.md`。
 
 ## 目录结构
 

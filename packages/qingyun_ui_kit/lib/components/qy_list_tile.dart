@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/qy_colors.dart';
 import '../theme/qy_tokens.dart';
+import 'qy_frost.dart';
 
 class QyListTile extends StatelessWidget {
   const QyListTile({
@@ -23,11 +24,10 @@ class QyListTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return SizedBox(
       height: 64,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: QyColors.surface,
-          borderRadius: BorderRadius.circular(QyTokens.radiusMd),
-        ),
+      child: QyFrost(
+        color: QyColors.frost,
+        blur: 12,
+        borderRadius: BorderRadius.circular(QyTokens.radiusMd),
         child: Material(
           color: Colors.transparent,
           child: InkWell(

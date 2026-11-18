@@ -20,7 +20,7 @@ class _ShareScreenState extends State<ShareScreen> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text('分享与权限', style: textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),
@@ -33,13 +33,13 @@ class _ShareScreenState extends State<ShareScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             QyCard(
-              gradient: QyColors.primaryGradient,
+              color: QyColors.surfaceSoft,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      const QyIcon(QyIcons.image, size: 20, color: QyColors.primaryDeep),
+                      const QyIcon(QyIcons.image, size: 20, color: QyColors.sky),
                       const SizedBox(width: 8),
                       Text('海边日落.JPG', style: textTheme.bodyLarge),
                     ],
@@ -49,7 +49,7 @@ class _ShareScreenState extends State<ShareScreen> {
                   const SizedBox(height: QyTokens.spaceLg),
                   QyButton(
                     '生成分享链接',
-                    icon: const QyIcon(QyIcons.link, size: 20, color: QyColors.ink),
+                    icon: const QyIcon(QyIcons.link, size: 20, color: QyColors.onDark),
                     onPressed: () => setState(() => _sharedLink = 'https://qy.example.com/s/8f3kq2'),
                   ),
                 ],
@@ -62,7 +62,7 @@ class _ShareScreenState extends State<ShareScreen> {
                   children: <Widget>[
                     Expanded(child: Text(_sharedLink!, style: textTheme.bodyMedium)),
                     IconButton(
-                      icon: const QyIcon(QyIcons.edit, size: 18, color: QyColors.primaryDeep),
+                      icon: const QyIcon(QyIcons.edit, size: 18, color: QyColors.sky),
                       onPressed: () => showQyToast(context, '链接已复制'),
                     ),
                   ],
@@ -77,6 +77,7 @@ class _ShareScreenState extends State<ShareScreen> {
                 children: <Widget>[
                   _SwitchRow(
                     icon: QyIcons.download,
+                    hue: QyHues.teal,
                     label: '允许下载',
                     value: _allowDownload,
                     onChanged: (value) => setState(() => _allowDownload = value),
@@ -84,6 +85,7 @@ class _ShareScreenState extends State<ShareScreen> {
                   const Divider(color: QyColors.divider, height: 1),
                   _SwitchRow(
                     icon: QyIcons.lock,
+                    hue: QyHues.gold,
                     label: '提取码保护',
                     value: _requirePassword,
                     onChanged: (value) => setState(() => _requirePassword = value),
@@ -91,6 +93,7 @@ class _ShareScreenState extends State<ShareScreen> {
                   const Divider(color: QyColors.divider, height: 1),
                   _SwitchRow(
                     icon: QyIcons.clock,
+                    hue: QyHues.purple,
                     label: '7 天后失效',
                     value: _expireIn7Days,
                     onChanged: (value) => setState(() => _expireIn7Days = value),
@@ -108,12 +111,14 @@ class _ShareScreenState extends State<ShareScreen> {
 class _SwitchRow extends StatelessWidget {
   const _SwitchRow({
     required this.icon,
+    required this.hue,
     required this.label,
     required this.value,
     required this.onChanged,
   });
 
   final String icon;
+  final QyIconHue hue;
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -124,12 +129,12 @@ class _SwitchRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       child: Row(
         children: <Widget>[
-          QyIcon(icon, size: 20, color: QyColors.primaryDeep),
+          QyTintedIcon(icon, hue: hue, size: 32),
           const SizedBox(width: 12),
           Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyLarge)),
           Switch(
             value: value,
-            activeColor: QyColors.primaryDeep,
+            activeColor: QyColors.primary,
             onChanged: onChanged,
           ),
         ],

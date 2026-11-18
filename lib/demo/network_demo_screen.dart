@@ -166,7 +166,7 @@ class _NetworkDemoScreenState extends State<NetworkDemoScreen> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: QyColors.canvas,
-      appBar: AppBar(
+      appBar: QyFrostAppBar(
         title: Text('网络层演示', style: textTheme.titleLarge),
         leading: IconButton(
           icon: const QyIcon(QyIcons.back, size: 22),
@@ -179,7 +179,7 @@ class _NetworkDemoScreenState extends State<NetworkDemoScreen> {
               padding: const EdgeInsets.all(20),
               children: <Widget>[
                 QyCard(
-                  gradient: QyColors.primaryGradient,
+                  color: QyColors.surfaceSoft,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[

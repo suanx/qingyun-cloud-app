@@ -72,16 +72,16 @@ class _HomeScreenState extends State<HomeScreen> {
             Text('上午好，今天也要轻轻存文件', style: textTheme.bodyMedium),
             const SizedBox(height: QyTokens.spaceXl),
 
-            // 卡片式功能入口：相册 / 文件 / 视频 / 同步 / 分类
-            const QyCard(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+            // 卡片式功能入口：相册 / 文件 / 视频 / 同步 / 分类（彩色图标）
+            QyCard(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
               child: Row(
                 children: <Widget>[
-                  _HomeEntry(icon: QyIcons.image, label: '相册', route: AppRouter.gallery),
-                  _HomeEntry(icon: QyIcons.folder, label: '文件', route: AppRouter.allFiles),
-                  _HomeEntry(icon: QyIcons.video, label: '视频', route: AppRouter.videos),
-                  _HomeEntry(icon: QyIcons.refresh, label: '同步', route: QyRoutes.transferFiles),
-                  _HomeEntry(icon: QyIcons.grid, label: '分类', route: QyRoutes.storage),
+                  _HomeEntry(icon: QyIcons.image, hue: QyHues.blue, label: '相册', route: AppRouter.gallery),
+                  _HomeEntry(icon: QyIcons.folder, hue: QyHues.gold, label: '文件', route: AppRouter.allFiles),
+                  _HomeEntry(icon: QyIcons.video, hue: QyHues.purple, label: '视频', route: AppRouter.videos),
+                  _HomeEntry(icon: QyIcons.refresh, hue: QyHues.teal, label: '同步', route: QyRoutes.transferFiles),
+                  _HomeEntry(icon: QyIcons.grid, hue: QyHues.orange, label: '分类', route: QyRoutes.storage),
                 ],
               ),
             ),
@@ -133,11 +133,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// 首页功能入口：圆形图标 + 文字标签，点击 push 对应功能页（可返回）。
+/// 首页功能入口：彩色图标 + 文字标签，点击 push 对应功能页（可返回）。
 class _HomeEntry extends StatelessWidget {
-  const _HomeEntry({required this.icon, required this.label, required this.route});
+  const _HomeEntry({
+    required this.icon,
+    required this.hue,
+    required this.label,
+    required this.route,
+  });
 
   final String icon;
+  final QyIconHue hue;
   final String label;
   final String route;
 
@@ -151,19 +157,8 @@ class _HomeEntry extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             children: <Widget>[
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: QyColors.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: QyColors.border),
-                  boxShadow: <BoxShadow>[QyTokens.softShadow(QyColors.warmShadow)],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: QyIcon(icon, size: 22, color: QyColors.primaryDeep),
-                ),
-              ),
-              const SizedBox(height: 6),
+              QyTintedIcon(icon, hue: hue, size: 46),
+              const SizedBox(height: 8),
               Text(label, style: Theme.of(context).textTheme.labelMedium),
             ],
           ),
