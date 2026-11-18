@@ -1,7 +1,7 @@
 name: qingyun_app
 description: "轻云 · 移动端云盘 —— 基于「轻云」高保真设计稿与 qingyun_ui_kit 组件骨架构建的 Flutter 双端应用。"
 publish_to: none
-version: 0.1.7+8
+version: 0.1.8+9
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

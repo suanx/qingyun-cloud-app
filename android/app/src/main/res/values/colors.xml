@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="launch_background_color">#FFFFFF</color>
-    <color name="ic_launcher_background">#4A7386</color>
+    <!-- 兼容项：adaptive icon 背景已改用 drawable/ic_launcher_background_gradient.xml 渐变 -->
+    <color name="ic_launcher_background">#FF2F6BFF</color>
 </resources>
