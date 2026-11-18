@@ -26,7 +26,6 @@ class QyListTile extends StatelessWidget {
       height: 64,
       child: QyFrost(
         color: QyColors.frost,
-        blur: 12,
         borderRadius: BorderRadius.circular(QyTokens.radiusMd),
         child: Material(
           color: Colors.transparent,

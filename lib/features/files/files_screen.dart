@@ -69,7 +69,6 @@ class _FilesScreenState extends State<FilesScreen> {
               children: <Widget>[
                 QyFrost(
                   color: QyColors.frost,
-                  blur: 14,
                   borderRadius: BorderRadius.circular(QyTokens.radiusPill),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),

@@ -5,10 +5,12 @@
 ## 1. 设计基调
 
 - 关键词：纯白 · 钢青蓝灰 · 彩色图标 · 磨砂玻璃
-- **所有页面背景纯白**，不使用渐变与装饰底纹
+- **页面背景以纯白为基调**；Tab 外壳通过 `QyPageBackground` 叠加顶部极淡冷调光晕（`#E9F0F4 → #F6F9FB → #FFFFFF`），为磨砂玻璃组件提供背景层次，纯装饰、不遮挡内容
 - 主色钢青蓝灰，近黑文字 + 冷灰次级文字
 - 功能图标统一为「彩色圆角浅底 + 同族深色描边图形」（`QyTintedIcon`）
-- **全局磨砂玻璃质感**：`QyFrost`（BackdropFilter 高斯模糊 + 半透明面 + 细描边），应用于卡片、列表项、应用栏、底部导航、分类胶囊、Toast 等全部容器
+- **全局磨砂玻璃质感（两级模式）**：`QyFrost` 统一入口——
+  - **玻璃面模式**（`backdrop: false`，默认）：90% 半透明白 + 细描边 + 柔投影，**无模糊层**，内容 100% 清晰。用于卡片、列表项、空状态、分类胶囊等承载内容的组件；
+  - **真磨砂模式**（`backdrop: true`）：玻璃面下叠加 `BackdropFilter` 高斯模糊，透出并虚化背后的滚动内容。**仅用于**应用栏、底部导航、Toast 浮层等悬浮于内容之上的栏体，避免大面积模糊遮挡页面内容。
 
 ## 2. 色彩（QyColors）
 
@@ -62,13 +64,14 @@
 | 组件 | 说明 |
 | --- | --- |
 | `QyIcon` | 40 个内联 SVG 图标（`QyIcons` 常量），无需资源文件 |
-| `QyFrost` / `QyFrostAppBar` | 磨砂玻璃容器 / 磨砂应用栏（BackdropFilter + 半透明面） |
+| `QyFrost` / `QyFrostAppBar` | 磨砂玻璃容器（玻璃面 / 真磨砂两级）/ 磨砂应用栏 |
+| `QyPageBackground` | 全局页面背景：白底 + 顶部极淡冷调光晕（Tab 外壳统一包裹） |
 | `QyTintedIcon` / `QyTintedIconCircle` | 彩色图标：圆角浅色底 + 同族深色图形（`QyHues` 九色族） |
 | `QyButton` | 四态：primary（蓝灰底白字）/ secondary / outline / disabled，高 52 胶囊 |
-| `QyCard` | 白底圆角 20 卡片 + 细描边 + 浅色投影；`color` 可传 `surfaceSoft` |
+| `QyCard` | 玻璃面卡片（90% 白 + 细描边 + 浅色投影），圆角 20；`color` 可传 `surfaceSoft` |
 | `QyListTile` | 64 高文件列表项（图标 + 标题 + 副标题 + trailing） |
 | `QyProgressBar` | 6 高胶囊进度条（可调高度），主色轨道 |
-| `QyBottomNav` | 纯白底部导航（首页/文件/传输/我的），选中态主色 + 底部小圆点 |
+| `QyBottomNav` | 磨砂玻璃底部导航（首页/文件/传输/我的），选中态主色 + 底部小圆点 |
 | `QyEmptyState` | 空状态（图标 + 标题 + 描述 + 可选按钮） |
 | `showQyToast` | 顶部 Overlay Toast（成功/失败两种） |
 | `qyLightTheme()` | MaterialApp 主题（Material 3） |

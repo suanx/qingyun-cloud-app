@@ -36,6 +36,7 @@ class QyBottomNav extends StatelessWidget {
     return QyFrost(
       color: QyColors.frostStrong,
       blur: 20,
+      backdrop: true,
       showBorder: false,
       child: DecoratedBox(
         decoration: const BoxDecoration(

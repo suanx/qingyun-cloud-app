@@ -25,9 +25,7 @@ class QyEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return QyFrost(
-      // ignore: deprecated_member_use
-      color: QyColors.surfaceSoft.withOpacity(0.86),
-      blur: 14,
+      color: QyColors.frost,
       borderRadius: BorderRadius.circular(24),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),

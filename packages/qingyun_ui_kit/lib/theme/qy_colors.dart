@@ -41,11 +41,11 @@ abstract final class QyColors {
   static const Color softShadow = Color(0x14809AAB);
 
   // ---- 磨砂玻璃（frosted glass） ----
-  /// 玻璃面：72% 半透明白。
-  static const Color frost = Color(0xB8FFFFFF);
+  /// 玻璃面：90% 半透明白（卡片、面板、胶囊——内容清晰优先）。
+  static const Color frost = Color(0xE6FFFFFF);
 
-  /// 强玻璃面：90% 半透明白（应用栏、底部导航）。
-  static const Color frostStrong = Color(0xE6FFFFFF);
+  /// 强玻璃面：94% 半透明白（应用栏、底部导航等栏体）。
+  static const Color frostStrong = Color(0xF0FFFFFF);
 
   /// 深色玻璃面：72% 墨色（Toast）。
   static const Color frostDark = Color(0xB820262B);

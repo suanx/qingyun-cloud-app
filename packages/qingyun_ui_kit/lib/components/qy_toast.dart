@@ -64,6 +64,7 @@ class _QyToastBodyState extends State<_QyToastBody> {
           child: QyFrost(
             color: QyColors.frostDark,
             blur: 16,
+            backdrop: true,
             showBorder: false,
             borderRadius: BorderRadius.circular(QyTokens.radiusLg),
             shadows: <BoxShadow>[QyTokens.cardShadow(const Color(0x3320262B))],

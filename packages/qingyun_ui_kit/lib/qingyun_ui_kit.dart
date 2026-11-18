@@ -6,6 +6,7 @@ export 'components/qy_icon.dart';
 export 'components/qy_tinted_icon.dart';
 export 'components/qy_frost.dart';
 export 'components/qy_frost_app_bar.dart';
+export 'components/qy_page_background.dart';
 export 'components/qy_button.dart';
 export 'components/qy_card.dart';
 export 'components/qy_list_tile.dart';

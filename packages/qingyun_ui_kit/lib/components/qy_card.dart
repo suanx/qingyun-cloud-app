@@ -29,7 +29,6 @@ class QyCard extends StatelessWidget {
     return QyFrost(
       borderRadius: BorderRadius.circular(QyTokens.radiusLg),
       color: glass,
-      blur: 14,
       shadows: elevated ? <BoxShadow>[QyTokens.softShadow(QyColors.softShadow)] : null,
       child: Material(
         color: Colors.transparent,

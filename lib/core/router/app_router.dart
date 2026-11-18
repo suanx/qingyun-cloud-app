@@ -101,7 +101,7 @@ class QyTabShell extends StatelessWidget {
       backgroundColor: QyColors.canvas,
       // 内容延伸至磨砂底部导航之下，滚动时呈现玻璃模糊效果
       extendBody: true,
-      body: navigationShell,
+      body: QyPageBackground(child: navigationShell),
       bottomNavigationBar: QyBottomNav(
         currentIndex: navigationShell.currentIndex,
         onChanged: (index) => navigationShell.goBranch(
