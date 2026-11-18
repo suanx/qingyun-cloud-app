@@ -29,7 +29,7 @@ abstract final class DemoRegistry {
       groupScenes,
       <DemoCase>[
         DemoCase(title: '启动页', description: '暖黄渐变 + 品牌标识，停顿后自动进入首页', route: QyRoutes.splash),
-        DemoCase(title: '首页', description: '容量卡片、快捷操作、最近文件、下拉刷新', route: QyRoutes.home),
+        DemoCase(title: '首页', description: '功能入口（相册/文件/视频/同步/分类）、最近文件、下拉刷新', route: QyRoutes.home),
         DemoCase(title: '文件分类与列表', description: '分类 chips 过滤 + 文件列表 + 空状态', route: QyRoutes.files),
         DemoCase(title: '传输任务', description: '上传/下载任务进度、暂停/继续切换', route: QyRoutes.transfers),
         DemoCase(title: '个人中心', description: '用户卡片、常用功能、设置分组', route: QyRoutes.profile),

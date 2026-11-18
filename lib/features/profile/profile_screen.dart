@@ -2,11 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/models/cloud_models.dart';
+import '../../core/network/cloud_repository.dart';
 import '../../core/router/app_router.dart';
 
 /// 个人中心场景。
-class ProfileScreen extends StatelessWidget {
+///
+/// 云端空间容量卡片自首页迁入，展示在用户信息下方。
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final CloudRepository _repository = CloudRepository();
+  StorageSummary _summary = MockData.storageSummary;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final summary = await _repository.storageSummary();
+      if (!mounted) return;
+      setState(() {
+        _summary = summary;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +50,8 @@ class ProfileScreen extends StatelessWidget {
         children: <Widget>[
           Text('我的', style: textTheme.headlineLarge),
           const SizedBox(height: QyTokens.spaceLg),
+
+          // 用户信息卡片
           QyCard(
             gradient: QyColors.primaryGradient,
             child: Row(
@@ -44,23 +79,49 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => context.go(QyRoutes.storage),
+                  onPressed: () => context.push(QyRoutes.storage),
                   child: const Text('容量管理'),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: QyTokens.spaceMd),
+
+          // 云端空间卡片（自首页迁入，展示在用户信息下方）
+          QyCard(
+            gradient: QyColors.primaryGradient,
+            onTap: () => context.push(QyRoutes.storage),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    const QyIcon(QyIcons.cloud, size: 20, color: QyColors.primaryDeep),
+                    const SizedBox(width: 8),
+                    Text('云端空间', style: textTheme.bodyLarge),
+                    const Spacer(),
+                    Text('管理', style: textTheme.labelMedium),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(_loading ? '加载中…' : _summary.label, style: textTheme.headlineMedium),
+                const SizedBox(height: 16),
+                QyProgressBar(value: _summary.ratio),
+              ],
+            ),
+          ),
           const SizedBox(height: QyTokens.spaceXl),
+
           Text('常用功能', style: textTheme.titleLarge),
           const SizedBox(height: QyTokens.spaceMd),
           QyCard(
             child: Column(
               children: <Widget>[
-                _MenuRow(icon: QyIcons.play, label: '功能演示（全量）', onTap: () => context.go(AppRouter.demo)),
+                _MenuRow(icon: QyIcons.play, label: '功能演示（全量）', onTap: () => context.push(AppRouter.demo)),
                 const Divider(color: QyColors.divider, height: 1),
-                _MenuRow(icon: QyIcons.chart, label: '容量管理', onTap: () => context.go(QyRoutes.storage)),
+                _MenuRow(icon: QyIcons.chart, label: '容量管理', onTap: () => context.push(QyRoutes.storage)),
                 const Divider(color: QyColors.divider, height: 1),
-                _MenuRow(icon: QyIcons.trash, label: '回收站', onTap: () => context.go(QyRoutes.trash)),
+                _MenuRow(icon: QyIcons.trash, label: '回收站', onTap: () => context.push(QyRoutes.trash)),
                 const Divider(color: QyColors.divider, height: 1),
                 _MenuRow(icon: QyIcons.star, label: '收藏文件', onTap: () => showQyToast(context, '收藏功能开发中')),
               ],

@@ -6,8 +6,14 @@ import '../../core/models/cloud_models.dart';
 import '../../core/network/cloud_repository.dart';
 
 /// 文件分类与列表场景。
+///
+/// [initialCategory] 指定初始分类（供首页相册 / 视频等入口复用）；
+/// [showHeader] 控制是否展示页内大标题（嵌入带 AppBar 的浏览器页时关闭）。
 class FilesScreen extends StatefulWidget {
-  const FilesScreen({super.key});
+  const FilesScreen({super.key, this.initialCategory, this.showHeader = true});
+
+  final FileCategory? initialCategory;
+  final bool showHeader;
 
   @override
   State<FilesScreen> createState() => _FilesScreenState();
@@ -15,7 +21,7 @@ class FilesScreen extends StatefulWidget {
 
 class _FilesScreenState extends State<FilesScreen> {
   final CloudRepository _repository = CloudRepository();
-  FileCategory _category = FileCategory.all;
+  late FileCategory _category = widget.initialCategory ?? FileCategory.all;
   List<CloudFile> _files = const <CloudFile>[];
   bool _loading = true;
 
@@ -48,11 +54,13 @@ class _FilesScreenState extends State<FilesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: Text('文件', style: textTheme.headlineLarge),
-          ),
-          const SizedBox(height: 12),
+          if (widget.showHeader) ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Text('文件', style: textTheme.headlineLarge),
+            ),
+            const SizedBox(height: 12),
+          ],
           SizedBox(
             height: 40,
             child: ListView(
@@ -89,7 +97,7 @@ class _FilesScreenState extends State<FilesScreen> {
                                 title: '该分类下暂无文件',
                                 description: '换一个分类看看，或上传新文件',
                                 actionLabel: '上传文件',
-                                onAction: () => context.go(QyRoutes.transferFiles),
+                                onAction: () => context.push(QyRoutes.transferFiles),
                               ),
                             ],
                           )
@@ -104,7 +112,7 @@ class _FilesScreenState extends State<FilesScreen> {
                                 title: file.name,
                                 subtitle: '${file.updatedLabel} · ${file.sizeLabel}',
                                 trailing: const QyIcon(QyIcons.more, size: 20, color: QyColors.muted),
-                                onTap: () => context.go(QyRoutes.preview),
+                                onTap: () => context.push(QyRoutes.preview),
                               );
                             },
                           ),

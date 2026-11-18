@@ -77,7 +77,7 @@
 | 路由 | 场景 | 实现文件 |
 | --- | --- | --- |
 | `/` | 启动页 | `features/splash/splash_screen.dart` |
-| `/home` | 首页（容量卡片 + 快捷操作 + 最近文件） | `features/home/home_screen.dart` |
+| `/home` | 首页（功能入口：相册/文件/视频/同步/分类 + 最近文件） | `features/home/home_screen.dart` |
 | `/files` | 文件分类与列表 | `features/files/files_screen.dart` |
 | `/transfers` | 传输任务 | `features/transfers/transfers_screen.dart` |
 | `/profile` | 个人中心 | `features/profile/profile_screen.dart` |

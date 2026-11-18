@@ -108,7 +108,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               leading: QyIcon(file.category.iconName, size: 32, color: file.category.tint),
                               title: file.name,
                               subtitle: '${file.updatedLabel} · ${file.sizeLabel}',
-                              onTap: () => context.go(QyRoutes.preview),
+                              onTap: () => context.push(QyRoutes.preview),
                             );
                           },
                         ),

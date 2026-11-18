@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/models/cloud_models.dart';
 import '../../demo/boundary_demo_screen.dart';
 import '../../demo/component_demo_screen.dart';
 import '../../demo/demo_gallery_screen.dart';
 import '../../demo/network_demo_screen.dart';
+import '../../features/files/files_browser_screen.dart';
 import '../../features/files/files_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/preview/preview_screen.dart';
@@ -30,6 +32,11 @@ abstract final class AppRouter {
   static const String demoComponents = '/demo/components';
   static const String demoNetwork = '/demo/network';
   static const String demoBoundary = '/demo/boundary';
+
+  /// 首页功能入口路由（带返回栏的文件浏览器等）。
+  static const String gallery = '/gallery';
+  static const String allFiles = '/all-files';
+  static const String videos = '/videos';
 
   static final GoRouter router = GoRouter(
     initialLocation: QyRoutes.splash,
@@ -62,6 +69,18 @@ abstract final class AppRouter {
       GoRoute(path: QyRoutes.trash, builder: (_, __) => const TrashScreen()),
       GoRoute(path: QyRoutes.storage, builder: (_, __) => const StorageScreen()),
       GoRoute(path: QyRoutes.states, builder: (_, __) => const StatesScreen()),
+      GoRoute(
+        path: gallery,
+        builder: (_, __) => const FilesBrowserScreen(title: '相册', category: FileCategory.image),
+      ),
+      GoRoute(
+        path: allFiles,
+        builder: (_, __) => const FilesBrowserScreen(title: '全部文件'),
+      ),
+      GoRoute(
+        path: videos,
+        builder: (_, __) => const FilesBrowserScreen(title: '视频', category: FileCategory.video),
+      ),
       GoRoute(path: demo, builder: (_, __) => const DemoGalleryScreen()),
       GoRoute(path: demoComponents, builder: (_, __) => const ComponentDemoScreen()),
       GoRoute(path: demoNetwork, builder: (_, __) => const NetworkDemoScreen()),

@@ -151,4 +151,4 @@ curl -H "Authorization: Bearer <token>" https://your-api.example.com/api/v1/stor
 # 期望：{"code":0,"message":"ok","data":{"used_gb":47.2,"total_gb":128}}
 ```
 
-App 侧对应展示：`47.2 / 128 GB`（首页容量卡片、容量管理页）。
+App 侧对应展示：`47.2 / 128 GB`（「我的」页云端空间卡片、容量管理页）。

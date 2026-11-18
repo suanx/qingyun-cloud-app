@@ -4,8 +4,12 @@ import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
 import '../../core/models/cloud_models.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/router/app_router.dart';
 
-/// 首页：容量卡片 + 快捷操作 + 最近文件。
+/// 首页：功能入口 + 最近文件。
+///
+/// 云端空间模块已迁移至「我的」页面（用户信息下方）；
+/// 原快捷操作区域移除，改为相册 / 文件 / 视频 / 同步 / 分类 五项卡片式入口。
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -15,7 +19,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final CloudRepository _repository = CloudRepository();
-  StorageSummary _summary = MockData.storageSummary;
   List<CloudFile> _recent = const <CloudFile>[];
   bool _loading = true;
 
@@ -27,11 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _load() async {
     try {
-      final summary = await _repository.storageSummary();
       final files = await _repository.files();
       if (!mounted) return;
       setState(() {
-        _summary = summary;
         _recent = files.take(3).toList();
         _loading = false;
       });
@@ -58,11 +59,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text('轻云', style: textTheme.headlineLarge),
                 ),
                 IconButton(
-                  onPressed: () => context.go(QyRoutes.search),
+                  onPressed: () => context.push(QyRoutes.search),
                   icon: const QyIcon(QyIcons.search, size: 22),
                 ),
                 IconButton(
-                  onPressed: () => context.go(QyRoutes.states),
+                  onPressed: () => context.push(QyRoutes.states),
                   icon: const QyIcon(QyIcons.bell, size: 22),
                 ),
               ],
@@ -71,41 +72,18 @@ class _HomeScreenState extends State<HomeScreen> {
             Text('上午好，今天也要轻轻存文件', style: textTheme.bodyMedium),
             const SizedBox(height: QyTokens.spaceXl),
 
-            // 容量卡片
+            // 卡片式功能入口：相册 / 文件 / 视频 / 同步 / 分类
             QyCard(
-              gradient: QyColors.primaryGradient,
-              onTap: () => context.go(QyRoutes.storage),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      const QyIcon(QyIcons.cloud, size: 20, color: QyColors.primaryDeep),
-                      const SizedBox(width: 8),
-                      Text('云端空间', style: textTheme.bodyLarge),
-                      const Spacer(),
-                      Text('管理', style: textTheme.labelMedium),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(_summary.label, style: textTheme.headlineMedium),
-                  const SizedBox(height: 16),
-                  QyProgressBar(value: _summary.ratio),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+              child: Row(
+                children: const <Widget>[
+                  _HomeEntry(icon: QyIcons.image, label: '相册', route: AppRouter.gallery),
+                  _HomeEntry(icon: QyIcons.folder, label: '文件', route: AppRouter.allFiles),
+                  _HomeEntry(icon: QyIcons.video, label: '视频', route: AppRouter.videos),
+                  _HomeEntry(icon: QyIcons.refresh, label: '同步', route: QyRoutes.transferFiles),
+                  _HomeEntry(icon: QyIcons.grid, label: '分类', route: QyRoutes.storage),
                 ],
               ),
-            ),
-            const SizedBox(height: QyTokens.spaceXl),
-
-            // 快捷操作
-            Text('快捷操作', style: textTheme.titleLarge),
-            const SizedBox(height: QyTokens.spaceMd),
-            Row(
-              children: <Widget>[
-                _QuickAction(icon: QyIcons.upload, label: '上传', onTap: () => context.go(QyRoutes.transferFiles)),
-                _QuickAction(icon: QyIcons.download, label: '下载', onTap: () => context.go(QyRoutes.transferFiles)),
-                _QuickAction(icon: QyIcons.share, label: '分享', onTap: () => context.go(QyRoutes.share)),
-                _QuickAction(icon: QyIcons.trash, label: '回收站', onTap: () => context.go(QyRoutes.trash)),
-              ],
             ),
             const SizedBox(height: QyTokens.spaceXl),
 
@@ -115,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text('最近文件', style: textTheme.titleLarge),
                 const Spacer(),
                 TextButton(
-                  onPressed: () => context.go(QyRoutes.files),
+                  onPressed: () => context.push(AppRouter.allFiles),
                   child: const Text('全部'),
                 ),
               ],
@@ -131,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: '这里还没有文件',
                 description: '上传第一份文件，开始你的轻云之旅',
                 actionLabel: '上传第一个文件',
-                onAction: () => context.go(QyRoutes.transferFiles),
+                onAction: () => context.push(QyRoutes.transferFiles),
               )
             else
               ...<Widget>[
@@ -143,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       title: file.name,
                       subtitle: '${file.updatedLabel} · ${file.sizeLabel}',
                       trailing: const QyIcon(QyIcons.more, size: 20, color: QyColors.muted),
-                      onTap: () => context.go(QyRoutes.preview),
+                      onTap: () => context.push(QyRoutes.preview),
                     ),
                   ),
               ],
@@ -155,35 +133,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({required this.icon, required this.label, required this.onTap});
+/// 首页功能入口：圆形图标 + 文字标签，点击 push 对应功能页（可返回）。
+class _HomeEntry extends StatelessWidget {
+  const _HomeEntry({required this.icon, required this.label, required this.route});
 
   final String icon;
   final String label;
-  final VoidCallback onTap;
+  final String route;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Column(
-          children: <Widget>[
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: QyColors.surface,
-                shape: BoxShape.circle,
-                border: Border.all(color: QyColors.border),
-                boxShadow: <BoxShadow>[QyTokens.softShadow(QyColors.warmShadow)],
+      child: InkWell(
+        onTap: () => context.push(route),
+        borderRadius: BorderRadius.circular(QyTokens.radiusSm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            children: <Widget>[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: QyColors.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: QyColors.border),
+                  boxShadow: <BoxShadow>[QyTokens.softShadow(QyColors.warmShadow)],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: QyIcon(icon, size: 22, color: QyColors.primaryDeep),
+                ),
               ),
-              child: IconButton(
-                onPressed: onTap,
-                icon: QyIcon(icon, size: 22, color: QyColors.primaryDeep),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(label, style: Theme.of(context).textTheme.labelMedium),
-          ],
+              const SizedBox(height: 6),
+              Text(label, style: Theme.of(context).textTheme.labelMedium),
+            ],
+          ),
         ),
       ),
     );
