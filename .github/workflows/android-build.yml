@@ -32,7 +32,13 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        run: |
+          set +e
+          flutter analyze > /tmp/analyze.log 2>&1
+          code=$?
+          cat /tmp/analyze.log
+          grep -E '^[[:space:]]*(error|warning|info)' /tmp/analyze.log | head -120 | while IFS= read -r line; do echo "::error::$line"; done
+          exit $code
 
       - name: Build APK
         run: flutter build apk --release
