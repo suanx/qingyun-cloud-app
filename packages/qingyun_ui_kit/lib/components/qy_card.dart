@@ -3,7 +3,7 @@ import '../theme/qy_colors.dart';
 import '../theme/qy_tokens.dart';
 import 'qy_frost.dart';
 
-/// 磨砂玻璃卡片：半透明白玻璃面 + 背景模糊 + 细描边 + 浅色投影。
+/// 玻璃面卡片：半透明白玻璃面 + 细描边 + 浅色投影，无模糊层、内容清晰。
 class QyCard extends StatelessWidget {
   const QyCard({
     super.key,

@@ -1,18 +1,29 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
-import '../../core/config/app_config.dart';
 import '../../core/models/cloud_models.dart';
 import '../../core/network/cloud_repository.dart';
 import '../../core/router/app_router.dart';
 
-/// 首页：功能入口 + 最近文件。
+/// 首页概览卡片数量（横向 PageView 页数，与下方小圆点一一对应）。
+const int _overviewCount = 3;
+
+/// 分类胶囊对应的落地页：相册 / 文件 / 视频 / 分类。
+const List<String> _entryRoutes = <String>[
+  AppRouter.gallery,
+  AppRouter.allFiles,
+  AppRouter.videos,
+  QyRoutes.files,
+];
+
+const List<String> _entryLabels = <String>['相册', '文件', '视频', '分类'];
+
+/// 首页：品牌抬头 + 概览卡片轮播 + 分类胶囊 + 最近文件。
 ///
-/// 云端空间模块已迁移至「我的」页面（用户信息下方）；
-/// 原快捷操作区域移除，改为相册 / 文件 / 视频 / 同步 / 分类 五项卡片式入口。
+/// 对齐高保真设计稿：纯白画布、玻璃面卡片（无真实模糊层）、横向可滑动的
+/// 概览卡、扁平分隔线式最近文件列表。云端空间容量同时保留在「我的」页面，
+/// 此处仅作概览入口；版本指纹只在启动页与「我的」页展示。
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -22,7 +33,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final CloudRepository _repository = CloudRepository();
+  final PageController _overviewController = PageController(viewportFraction: 0.44);
+
   List<CloudFile> _recent = const <CloudFile>[];
+  StorageSummary _summary = MockData.storageSummary;
+  int _entry = 0;
+  int _overviewPage = 0;
   bool _loading = true;
 
   @override
@@ -31,18 +47,31 @@ class _HomeScreenState extends State<HomeScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _overviewController.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     try {
       final files = await _repository.files();
+      final summary = await _repository.storageSummary();
       if (!mounted) return;
       setState(() {
-        _recent = files.take(3).toList();
+        _recent = files;
+        _summary = summary;
         _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
     }
+  }
+
+  void _onEntrySelected(int index) {
+    setState(() => _entry = index);
+    context.push(_entryRoutes[index]);
   }
 
   @override
@@ -59,34 +88,42 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: <Widget>[
                 Expanded(
-                  child: Text('轻云', style: textTheme.headlineLarge),
+                  child: Text(
+                    '轻云',
+                    style: textTheme.displayLarge?.copyWith(fontWeight: FontWeight.w800),
+                  ),
                 ),
-                Text(AppConfig.versionLabel, style: textTheme.labelSmall),
                 IconButton(
                   onPressed: () => context.push(QyRoutes.search),
-                  icon: const QyIcon(QyIcons.search, size: 22),
+                  icon: const QyIcon(QyIcons.search, size: 24),
                 ),
                 IconButton(
                   onPressed: () => context.push(QyRoutes.states),
-                  icon: const QyIcon(QyIcons.bell, size: 22),
+                  icon: const QyIcon(QyIcons.bell, size: 24),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text('上午好，今天也要轻轻存文件', style: textTheme.bodyMedium),
-            const SizedBox(height: QyTokens.spaceXl),
+            const SizedBox(height: 8),
+            Text(
+              '上午好，今天也要轻轻存文件',
+              style: textTheme.bodyLarge?.copyWith(color: QyColors.sub),
+            ),
+            const SizedBox(height: QyTokens.spaceXxl),
 
-            // 卡片式功能入口幻灯片：上下导航箭头 + 垂直翻页
-            const QyCard(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              child: _EntryCarousel(),
+            _OverviewCarousel(
+              controller: _overviewController,
+              page: _overviewPage,
+              summary: _summary,
+              onPageChanged: (int page) => setState(() => _overviewPage = page),
             ),
             const SizedBox(height: QyTokens.spaceXl),
 
-            // 最近文件
+            _CategoryBar(selected: _entry, onSelected: _onEntrySelected),
+            const SizedBox(height: QyTokens.spaceXxxl),
+
             Row(
               children: <Widget>[
-                Text('最近文件', style: textTheme.titleLarge),
+                Text('最近文件', style: textTheme.headlineMedium),
                 const Spacer(),
                 TextButton(
                   onPressed: () => context.push(AppRouter.allFiles),
@@ -94,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: QyTokens.spaceSm),
+            const SizedBox(height: QyTokens.spaceMd),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.all(32),
@@ -109,17 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             else
               ...<Widget>[
-                for (final file in _recent)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: QyListTile(
-                      leading: QyIcon(file.category.iconName, size: 32, color: file.category.tint),
-                      title: file.name,
-                      subtitle: '${file.updatedLabel} · ${file.sizeLabel}',
-                      trailing: const QyIcon(QyIcons.more, size: 20, color: QyColors.muted),
-                      onTap: () => context.push(QyRoutes.preview),
-                    ),
-                  ),
+                for (final file in _recent.take(2)) _RecentFileRow(file: file),
               ],
             const SizedBox(height: 96),
           ],
@@ -129,178 +156,396 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// 首页功能入口：彩色图标 + 文字标签，点击 push 对应功能页（可返回）。
-class _HomeEntry extends StatelessWidget {
-  const _HomeEntry({
-    required this.icon,
-    required this.hue,
-    required this.label,
-    required this.route,
+/// 概览卡片轮播：每张卡占约 44% 屏宽，第一屏呈现两张完整卡 + 第三张露角。
+class _OverviewCarousel extends StatelessWidget {
+  const _OverviewCarousel({
+    required this.controller,
+    required this.page,
+    required this.summary,
+    required this.onPageChanged,
   });
 
-  final String icon;
-  final QyIconHue hue;
-  final String label;
-  final String route;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: () => context.push(route),
-        borderRadius: BorderRadius.circular(QyTokens.radiusSm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            children: <Widget>[
-              QyTintedIcon(icon, hue: hue, size: 46),
-              const SizedBox(height: 8),
-              Text(label, style: Theme.of(context).textTheme.labelMedium),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 首页功能入口幻灯片：垂直翻页 + 上/下两个导航箭头。
-///
-/// 第一页为五大核心入口（相册/文件/视频/同步/分类）；
-/// 第二页为更多已有功能入口（回收站/容量管理/搜索/消息），不新增功能。
-/// 上方箭头：小尺寸，处于第一页时置灰且不可点击；
-/// 下方箭头：大尺寸，处于末页时置灰且不可点击。
-class _EntryCarousel extends StatefulWidget {
-  const _EntryCarousel();
-
-  @override
-  State<_EntryCarousel> createState() => _EntryCarouselState();
-}
-
-class _EntryCarouselState extends State<_EntryCarousel> {
-  final PageController _controller = PageController();
-  int _page = 0;
-
-  static const int _pageCount = 2;
-
-  void _go(int delta) {
-    final int target = (_page + delta).clamp(0, _pageCount - 1);
-    _controller.animateToPage(
-      target,
-      duration: QyTokens.shortMotion,
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final PageController controller;
+  final int page;
+  final StorageSummary summary;
+  final ValueChanged<int> onPageChanged;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        Center(
-          child: _ArrowButton(
-            size: 28,
-            iconSize: 16,
-            up: true,
-            enabled: _page > 0,
-            onTap: () => _go(-1),
-          ),
-        ),
-        const SizedBox(height: 6),
         SizedBox(
-          height: 88,
+          height: 214,
           child: PageView(
-            controller: _controller,
-            scrollDirection: Axis.vertical,
-            onPageChanged: (int page) => setState(() => _page = page),
-            children: const <Widget>[
-              _EntryPage(entries: <_HomeEntry>[
-                _HomeEntry(icon: QyIcons.image, hue: QyHues.blue, label: '相册', route: AppRouter.gallery),
-                _HomeEntry(icon: QyIcons.folder, hue: QyHues.gold, label: '文件', route: AppRouter.allFiles),
-                _HomeEntry(icon: QyIcons.video, hue: QyHues.purple, label: '视频', route: AppRouter.videos),
-                _HomeEntry(icon: QyIcons.refresh, hue: QyHues.teal, label: '同步', route: QyRoutes.transferFiles),
-                _HomeEntry(icon: QyIcons.grid, hue: QyHues.orange, label: '分类', route: QyRoutes.storage),
-              ]),
-              _EntryPage(entries: <_HomeEntry>[
-                _HomeEntry(icon: QyIcons.trash, hue: QyHues.coral, label: '回收站', route: QyRoutes.trash),
-                _HomeEntry(icon: QyIcons.chart, hue: QyHues.slate, label: '容量管理', route: QyRoutes.storage),
-                _HomeEntry(icon: QyIcons.search, hue: QyHues.blue, label: '搜索', route: QyRoutes.search),
-                _HomeEntry(icon: QyIcons.bell, hue: QyHues.green, label: '消息', route: QyRoutes.states),
-              ]),
+            controller: controller,
+            padEnds: false,
+            onPageChanged: onPageChanged,
+            children: <Widget>[
+              const _OverviewCard(child: _PhotoOverview()),
+              _OverviewCard(color: QyColors.surfaceSoft, child: _StorageOverview(summary: summary)),
+              const _OverviewCard(child: _TransferOverview()),
             ],
           ),
         ),
-        const SizedBox(height: 6),
-        Center(
-          child: _ArrowButton(
-            size: 46,
-            iconSize: 24,
-            up: false,
-            enabled: _page < _pageCount - 1,
-            onTap: () => _go(1),
-          ),
+        const SizedBox(height: QyTokens.spaceLg),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            for (var i = 0; i < _overviewCount; i++) _PageDot(active: i == page),
+          ],
         ),
       ],
     );
   }
 }
 
-/// 幻灯片单页：一行均分的功能入口。
-class _EntryPage extends StatelessWidget {
-  const _EntryPage({required this.entries});
+/// 统一的玻璃面概览卡：圆角 20 + 细描边 + 柔投影，不含任何模糊层。
+class _OverviewCard extends StatelessWidget {
+  const _OverviewCard({required this.child, this.color = QyColors.surface});
 
-  final List<_HomeEntry> entries;
+  final Widget child;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: entries);
+    return Padding(
+      padding: const EdgeInsets.only(right: QyTokens.spaceMd),
+      child: QyCard(
+        color: color,
+        padding: const EdgeInsets.all(20),
+        child: child,
+      ),
+    );
   }
 }
 
-/// 幻灯片导航箭头按钮：玻璃面圆形按钮。
-///
-/// [up] 为 true 时显示向上箭头（小尺寸），false 为向下箭头（大尺寸）；
-/// [enabled] 为 false 时置灰且不可点击。
-class _ArrowButton extends StatelessWidget {
-  const _ArrowButton({
-    required this.size,
-    required this.iconSize,
-    required this.up,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final double size;
-  final double iconSize;
-  final bool up;
-  final bool enabled;
-  final VoidCallback onTap;
+/// 最近照片卡：大数字 + 右下角海边日落缩略图。
+class _PhotoOverview extends StatelessWidget {
+  const _PhotoOverview();
 
   @override
   Widget build(BuildContext context) {
-    final Color fg = enabled ? QyColors.primary : QyColors.muted;
-    // QyIcons.back 为左箭头：顺时针旋转 90° 得向上箭头，逆时针 90° 得向下箭头。
-    final Widget icon = Transform.rotate(
-      angle: (up ? 90 : -90) * math.pi / 180,
-      child: QyIcon(QyIcons.back, size: iconSize, color: fg),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '最近照片',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const Spacer(),
+        Text(
+          MockData.recentPhotoCount.toString(),
+          style: const TextStyle(
+            fontSize: 58,
+            height: 1,
+            fontWeight: FontWeight.w700,
+            color: QyColors.ink,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text('张', style: Theme.of(context).textTheme.bodyMedium),
+        const Spacer(),
+        const Align(alignment: Alignment.bottomRight, child: _SunsetThumb()),
+      ],
     );
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(size / 2),
-      child: QyFrost(
-        color: enabled ? QyColors.frost : QyColors.surfaceSoft,
-        borderRadius: BorderRadius.circular(size / 2),
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Center(child: icon),
+  }
+}
+
+/// 存储空间卡：已用容量 + 占比进度条。
+class _StorageOverview extends StatelessWidget {
+  const _StorageOverview({required this.summary});
+
+  final StorageSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '存储空间',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const Spacer(),
+        Text(
+          summary.usedGb.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 58,
+            height: 1,
+            fontWeight: FontWeight.w700,
+            color: QyColors.ink,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text('GB 已用', style: Theme.of(context).textTheme.bodyMedium),
+        const Spacer(),
+        QyProgressBar(value: summary.ratio),
+      ],
+    );
+  }
+}
+
+/// 传输任务卡：进行中任务数 + 平均进度。
+class _TransferOverview extends StatelessWidget {
+  const _TransferOverview();
+
+  @override
+  Widget build(BuildContext context) {
+    final running = MockData.transfers
+        .where((TransferTask task) => task.status == TransferStatus.running)
+        .length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '传输任务',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const Spacer(),
+        Text(
+          '$running',
+          style: const TextStyle(
+            fontSize: 58,
+            height: 1,
+            fontWeight: FontWeight.w700,
+            color: QyColors.ink,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text('个进行中', style: Theme.of(context).textTheme.bodyMedium),
+        const Spacer(),
+        const QyProgressBar(value: 0.62),
+      ],
+    );
+  }
+}
+
+/// 设计稿「海边日落」缩略图：纯 Dart 渐变绘制，不引入图片资源，避免打包缺资源。
+class _SunsetThumb extends StatelessWidget {
+  const _SunsetThumb({this.size = 76});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.all(Radius.circular(10)),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          children: <Widget>[
+            const Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: <double>[0, 0.58, 1],
+                    colors: <Color>[
+                      Color(0xFFF3B978),
+                      Color(0xFFFBE3BE),
+                      Color(0xFF6E9FBE),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: size * 0.38,
+              top: size * 0.30,
+              child: Container(
+                width: size * 0.22,
+                height: size * 0.22,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF4D2),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: size * 0.40,
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[Color(0x667FAEC8), Color(0xFF4C7FA0)],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+/// 轮播小圆点指示器。
+class _PageDot extends StatelessWidget {
+  const _PageDot({required this.active});
+
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      width: active ? 8 : 7,
+      height: active ? 8 : 7,
+      decoration: BoxDecoration(
+        color: active ? QyColors.primary : QyColors.border,
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+}
+
+/// 分类胶囊：描边胶囊内四个快捷入口，右侧「已同步」状态点。
+class _CategoryBar extends StatelessWidget {
+  const _CategoryBar({required this.selected, required this.onSelected});
+
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Container(
+            height: 52,
+            decoration: BoxDecoration(
+              border: Border.all(color: QyColors.border, width: 1),
+              borderRadius: const BorderRadius.all(Radius.circular(QyTokens.radiusPill)),
+            ),
+            child: Row(
+              children: <Widget>[
+                for (var i = 0; i < _entryLabels.length; i++)
+                  _CategoryChip(
+                    label: _entryLabels[i],
+                    icon: i == 3 ? QyIcons.list : null,
+                    selected: i == selected,
+                    onTap: () => onSelected(i),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: QyTokens.spaceMd),
+        Text('已同步', style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(width: 6),
+        Container(
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(color: QyColors.primary, shape: BoxShape.circle),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.icon,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final String? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fg = selected ? QyColors.onDark : QyColors.sub;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: selected ? QyColors.primaryDeep : Colors.transparent,
+            borderRadius: const BorderRadius.all(Radius.circular(QyTokens.radiusPill)),
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (icon != null) ...<Widget>[
+                QyIcon(icon!, size: 16, color: fg),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: fg),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 最近文件行：扁平布局 + 细分割线，不使用玻璃卡片。
+class _RecentFileRow extends StatelessWidget {
+  const _RecentFileRow({required this.file});
+
+  final CloudFile file;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        InkWell(
+          onTap: () => context.push(QyRoutes.preview),
+          child: SizedBox(
+            height: 92,
+            child: Row(
+              children: <Widget>[
+                const QyIcon(QyIcons.doc, size: 40, color: QyColors.primary),
+                const SizedBox(width: QyTokens.spaceLg),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        file.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${file.updatedLabel} · ${file.sizeLabel}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                const QyIcon(QyIcons.more, size: 20, color: QyColors.muted),
+              ],
+            ),
+          ),
+        ),
+        const Divider(color: QyColors.divider, height: 1),
+      ],
     );
   }
 }

@@ -45,12 +45,16 @@ class CloudRepository {
 
 /// 内置示例数据：与设计稿场景一致，用于无后端时展示完整 UI。
 abstract final class MockData {
-  static const StorageSummary storageSummary = StorageSummary(usedGb: 47.2, totalGb: 128);
+  /// 与首页概览卡一致：8.2 GB 已用 / 10 GB 总量，进度条约 82%。
+  static const StorageSummary storageSummary = StorageSummary(usedGb: 8.2, totalGb: 10);
+
+  /// 设计稿「最近照片」数量；接入真实相册后改由数据仓库提供。
+  static const int recentPhotoCount = 12;
 
   static const List<CloudFile> _allFiles = <CloudFile>[
-    CloudFile(id: 'f1', name: '海边日落.JPG', category: FileCategory.image, sizeLabel: '4.2 MB', updatedLabel: '今天 14:32', starred: true),
-    CloudFile(id: 'f2', name: '产品需求文档.docx', category: FileCategory.doc, sizeLabel: '860 KB', updatedLabel: '今天 11:05'),
+    CloudFile(id: 'f1', name: '海边日落.JPG', category: FileCategory.image, sizeLabel: '860 KB', updatedLabel: '今天 14:32', starred: true),
     CloudFile(id: 'f3', name: '团队 Trip 精华剪辑.MP4', category: FileCategory.video, sizeLabel: '326 MB', updatedLabel: '昨天 21:47', starred: true),
+    CloudFile(id: 'f2', name: '产品需求文档.docx', category: FileCategory.doc, sizeLabel: '1.4 MB', updatedLabel: '昨天 10:05'),
     CloudFile(id: 'f4', name: '轻云主题曲 Demo.mp3', category: FileCategory.music, sizeLabel: '7.8 MB', updatedLabel: '昨天 09:20'),
     CloudFile(id: 'f5', name: '设计资源打包.zip', category: FileCategory.zip, sizeLabel: '1.2 GB', updatedLabel: '11-14'),
     CloudFile(id: 'f6', name: '桌面整理.png', category: FileCategory.image, sizeLabel: '2.1 MB', updatedLabel: '11-13'),

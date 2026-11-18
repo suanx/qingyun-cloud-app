@@ -4,13 +4,15 @@
 
 ## 1. 设计基调
 
-- 关键词：纯白 · 钢青蓝灰 · 彩色图标 · 磨砂玻璃
-- **页面背景以纯白为基调**；Tab 外壳通过 `QyPageBackground` 叠加顶部极淡冷调光晕（`#E9F0F4 → #F6F9FB → #FFFFFF`），为磨砂玻璃组件提供背景层次，纯装饰、不遮挡内容
+- 关键词：纯白 · 钢青蓝灰 · 彩色图标 · 玻璃面质感
+- **页面背景以纯白为基调**；Tab 外壳通过 `QyPageBackground` 叠加近乎不可见的冷调光晕（`#F8FBFD → #FCFDFE → #FFFFFF`），为玻璃面组件提供明度过渡，纯装饰、不遮挡内容
 - 主色钢青蓝灰，近黑文字 + 冷灰次级文字
 - 功能图标统一为「彩色圆角浅底 + 同族深色描边图形」（`QyTintedIcon`）
-- **全局磨砂玻璃质感（两级模式）**：`QyFrost` 统一入口——
-  - **玻璃面模式**（`backdrop: false`，默认）：90% 半透明白 + 细描边 + 柔投影，**无模糊层**，内容 100% 清晰。用于卡片、列表项、空状态、分类胶囊等承载内容的组件；
-  - **真磨砂模式**（`backdrop: true`）：玻璃面下叠加 `BackdropFilter` 高斯模糊，透出并虚化背后的滚动内容。**仅用于**应用栏、底部导航、Toast 浮层等悬浮于内容之上的栏体，避免大面积模糊遮挡页面内容。
+- **玻璃面体系**：`QyFrost` 统一入口——
+  - **玻璃面模式**（`backdrop: false`，全 App 当前唯一启用）：90% 半透明白 + 细描边 + 柔投影，**无模糊层**，内容 100% 清晰。用于卡片、列表项、空状态、分类胶囊等承载内容的组件；
+  - **真磨砂模式**（`backdrop: true`，当前禁用）：玻璃面下叠加 `BackdropFilter` 高斯模糊，透出并虚化背后的滚动内容。原设计仅用于应用栏、底部导航、Toast 浮层等悬浮于内容之上的栏体。
+- **当前实现状态（以代码为准）**：`QyFrost.realBlurEnabled` 全局关闭，且 AppBar / 底部导航 / Toast 的调用点已统一改为 `backdrop: false`，运行时不创建任何 `BackdropFilter`；总开关仅作兜底。原因是部分 Android 设备上模糊区域会异常扩大并泄漏到整页（v0.1.2 已复发一次，`RepaintBoundary` 不足以兜底）。重新启用前须完成多机型真机回归验证，并同步修改本节说明，避免再次出现"文档说可用、代码却已全局禁用"的偏差。
+- **首页结构**（对齐高保真设计稿）：品牌抬头（轻云 + 搜索/通知）→ 问候语 → 横向概览卡轮播（最近照片 / 存储空间 / 传输任务，3 页 + 小圆点）→ 分类胶囊（相册/文件/视频/分类 + 已同步状态点）→ 最近文件扁平列表（细分割线，无卡片底）。底部导航为纯白玻璃面，首页选中态为主色实心圆徽标。
 
 ## 2. 色彩（QyColors）
 
@@ -64,14 +66,14 @@
 | 组件 | 说明 |
 | --- | --- |
 | `QyIcon` | 40 个内联 SVG 图标（`QyIcons` 常量），无需资源文件 |
-| `QyFrost` / `QyFrostAppBar` | 磨砂玻璃容器（玻璃面 / 真磨砂两级）/ 磨砂应用栏 |
+| `QyFrost` / `QyFrostAppBar` | 玻璃面容器（真磨砂模式已禁用）/ 玻璃面应用栏 |
 | `QyPageBackground` | 全局页面背景：白底 + 顶部极淡冷调光晕（Tab 外壳统一包裹） |
 | `QyTintedIcon` / `QyTintedIconCircle` | 彩色图标：圆角浅色底 + 同族深色图形（`QyHues` 九色族） |
 | `QyButton` | 四态：primary（蓝灰底白字）/ secondary / outline / disabled，高 52 胶囊 |
 | `QyCard` | 玻璃面卡片（90% 白 + 细描边 + 浅色投影），圆角 20；`color` 可传 `surfaceSoft` |
 | `QyListTile` | 64 高文件列表项（图标 + 标题 + 副标题 + trailing） |
 | `QyProgressBar` | 6 高胶囊进度条（可调高度），主色轨道 |
-| `QyBottomNav` | 磨砂玻璃底部导航（首页/文件/传输/我的），选中态主色 + 底部小圆点 |
+| `QyBottomNav` | 纯白玻璃面底部导航（首页/文件/传输/我的），首页选中态主色实心圆 + 底部小圆点 |
 | `QyEmptyState` | 空状态（图标 + 标题 + 描述 + 可选按钮） |
 | `showQyToast` | 顶部 Overlay Toast（成功/失败两种） |
 | `qyLightTheme()` | MaterialApp 主题（Material 3） |
@@ -82,7 +84,7 @@
 | 路由 | 场景 | 实现文件 |
 | --- | --- | --- |
 | `/` | 启动页 | `features/splash/splash_screen.dart` |
-| `/home` | 首页（功能入口：相册/文件/视频/同步/分类 + 最近文件） | `features/home/home_screen.dart` |
+| `/home` | 首页（概览卡轮播 + 分类胶囊 + 最近文件） | `features/home/home_screen.dart` |
 | `/files` | 文件分类与列表 | `features/files/files_screen.dart` |
 | `/transfers` | 传输任务 | `features/transfers/transfers_screen.dart` |
 | `/profile` | 个人中心 | `features/profile/profile_screen.dart` |

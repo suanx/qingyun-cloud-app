@@ -46,7 +46,7 @@ class ComponentDemoScreen extends StatelessWidget {
           _section(context, 'QyCard · 常规与浅色'),
           QyCard(
             onTap: () => showQyToast(context, '卡片点击'),
-            child: Text('磨砂玻璃卡 · 圆角 20 · 背景模糊', style: textTheme.bodyLarge),
+            child: Text('玻璃面卡 · 圆角 20 · 无模糊层', style: textTheme.bodyLarge),
           ),
           const SizedBox(height: 12),
           const QyCard(

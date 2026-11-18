@@ -18,7 +18,10 @@ const List<QyBottomNavItem> qyDefaultNavItems = <QyBottomNavItem>[
   QyBottomNavItem(label: '我的', icon: QyIcons.user),
 ];
 
-/// 底部导航：磨砂玻璃面 + 顶部细分隔线；选中项为主色图标/文字 + 底部小圆点。
+/// 底部导航：纯白玻璃面（无模糊层）+ 选中态主色实心徽标 + 底部小圆点。
+///
+/// 对齐高保真设计稿：背景纯白、无顶部分隔线；首页选中时以主色实心圆
+/// 作为徽标，其余项保持线性图标。真磨砂已在 [QyFrost] 处全局关闭。
 class QyBottomNav extends StatelessWidget {
   const QyBottomNav({
     super.key,
@@ -34,30 +37,23 @@ class QyBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return QyFrost(
-      color: QyColors.frostStrong,
-      blur: 20,
-      backdrop: true,
+      color: QyColors.canvas,
       showBorder: false,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: QyColors.divider, width: 1)),
-        ),
-        child: SizedBox(
-          height: QyTokens.navHeight,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 18),
-            child: Row(
-              children: <Widget>[
-                for (var i = 0; i < items.length; i++)
-                  Expanded(
-                    child: _NavItem(
-                      item: items[i],
-                      active: i == currentIndex,
-                      onTap: () => onChanged(i),
-                    ),
+      child: SizedBox(
+        height: QyTokens.navHeight,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 10, bottom: 18),
+          child: Row(
+            children: <Widget>[
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: _NavItem(
+                    item: items[i],
+                    active: i == currentIndex,
+                    onTap: () => onChanged(i),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
@@ -74,24 +70,31 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? QyColors.primary : QyColors.muted;
+    final Color fg = active ? QyColors.primary : QyColors.muted;
     return InkWell(
       onTap: onTap,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          QyIcon(item.icon, size: 22, color: color),
-          const SizedBox(height: 4),
+          if (active && item.icon == QyIcons.home)
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(color: QyColors.primary, shape: BoxShape.circle),
+            )
+          else
+            QyIcon(item.icon, size: 26, color: fg),
+          const SizedBox(height: 6),
           Text(
             item.label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               height: 1,
               fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-              color: color,
+              color: active ? QyColors.ink : QyColors.muted,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           AnimatedContainer(
             duration: QyTokens.shortMotion,
             width: 4,

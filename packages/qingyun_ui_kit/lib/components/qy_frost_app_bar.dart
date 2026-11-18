@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/qy_colors.dart';
 import 'qy_frost.dart';
 
-/// 磨砂玻璃应用栏：透明 AppBar + 高斯模糊半透明白背景。
+/// 玻璃面应用栏：透明 AppBar + 半透明白玻璃面。
 ///
-/// 页面内容滚动到栏体下方时呈现磨砂玻璃效果。
+/// 仅保留细描边与半透明质感，不含真实模糊层（真磨砂已全局关闭），
+/// 页面内容滚动到栏体下方时始终清晰可读。
 class QyFrostAppBar extends StatelessWidget implements PreferredSizeWidget {
   const QyFrostAppBar({
     super.key,
@@ -35,8 +36,7 @@ class QyFrostAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: actions,
       flexibleSpace: const QyFrost(
         color: QyColors.frostStrong,
-        blur: 20,
-        backdrop: true,
+        backdrop: false,
         showBorder: false,
         child: SizedBox.expand(),
       ),

@@ -15,12 +15,18 @@ import '../theme/qy_colors.dart';
 class QyFrost extends StatelessWidget {
   /// 全局真磨砂（BackdropFilter）总开关。
   ///
-  /// 默认开启，按原设计范围生效：仅 AppBar / 底部导航 / Toast 三类
-  /// 悬浮栏体使用真磨砂；承载内容的卡片、面板、列表项始终为玻璃面模式，
-  /// 不会出现整片区域被磨砂覆盖的效果。
-  /// 真磨砂层统一包裹 [RepaintBoundary]，将背景采样隔离在独立图层内，
-  /// 规避部分设备 BackdropFilter 模糊区域异常扩大导致整页雾化的问题。
-  static bool realBlurEnabled = true;
+  /// 默认关闭：部分 Android 设备的 Skia/GPU 合成存在 BackdropFilter
+  /// 模糊区域异常扩大的问题，模糊会泄漏到整个页面，导致整页内容被雾化。
+  /// 该问题已复发过一次（1370ffc6ea 关闭 → 5ef54af7a5 重新启用 → 复发），
+  /// 且 [RepaintBoundary] 隔离不足以在所有机型上兜住，故以总开关短路为准。
+  ///
+  /// 关闭后全 App 仅保留玻璃面质感（半透明面 + 细描边 + 柔投影），
+  /// 内容 100% 清晰；AppBar / 底部导航 / Toast 的调用点已统一改为
+  /// `backdrop: false`，运行时不再创建任何 BackdropFilter，总开关仅作兜底。
+  ///
+  /// 请勿在未经多机型真机回归验证前重新开启；恢复时须同步更新
+  /// docs/DESIGN_SPEC.md 的「当前实现状态」说明。
+  static bool realBlurEnabled = false;
 
   const QyFrost({
     super.key,
@@ -51,8 +57,8 @@ class QyFrost extends StatelessWidget {
 
   /// 是否对组件背后的内容做真实高斯模糊。
   ///
-  /// 仅栏体（AppBar / 底部导航）与浮层（Toast）应开启；
-  /// 承载内容的卡片、面板保持默认 false，确保内容清晰可读。
+  /// 当前全 App 调用点均为 false：整页雾化问题在多机型上无法稳定兜底，
+  /// 已按 DESIGN_SPEC 统一收敛为玻璃面模式。见 [realBlurEnabled]。
   final bool backdrop;
 
   @override
@@ -72,6 +78,8 @@ class QyFrost extends StatelessWidget {
     if (!backdrop || !realBlurEnabled) {
       return body;
     }
+    // 注意：realBlurEnabled 当前为 false，以下分支不会执行；保留实现
+    // 以便按 DESIGN_SPEC 的流程完成多机型验证后再评估恢复。
     // RepaintBoundary：把真磨砂层的背景采样限制在独立重绘边界内，
     // 防止模糊效果泄漏到整个页面（部分机型的合成器兼容性问题）。
     return RepaintBoundary(
