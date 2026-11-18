@@ -76,10 +76,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Text('上午好，今天也要轻轻存文件', style: textTheme.bodyMedium),
             const SizedBox(height: QyTokens.spaceXl),
 
-            // 卡片式功能入口：相册 / 文件 / 视频 / 同步 / 分类（彩色图标）
             // 卡片式功能入口幻灯片：上下导航箭头 + 垂直翻页
-            QyCard(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            const QyCard(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               child: _EntryCarousel(),
             ),
             const SizedBox(height: QyTokens.spaceXl),
