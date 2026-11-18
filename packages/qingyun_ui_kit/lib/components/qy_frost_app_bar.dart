@@ -33,11 +33,11 @@ class QyFrostAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: title,
       leading: leading,
       actions: actions,
-      flexibleSpace: QyFrost(
+      flexibleSpace: const QyFrost(
         color: QyColors.frostStrong,
         blur: 20,
         showBorder: false,
-        child: const SizedBox.expand(),
+        child: SizedBox.expand(),
       ),
     );
   }

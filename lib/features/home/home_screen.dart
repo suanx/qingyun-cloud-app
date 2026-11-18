@@ -73,8 +73,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: QyTokens.spaceXl),
 
             // 卡片式功能入口：相册 / 文件 / 视频 / 同步 / 分类（彩色图标）
-            QyCard(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+            const QyCard(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
               child: Row(
                 children: <Widget>[
                   _HomeEntry(icon: QyIcons.image, hue: QyHues.blue, label: '相册', route: AppRouter.gallery),

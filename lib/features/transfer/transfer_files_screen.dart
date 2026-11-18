@@ -128,7 +128,7 @@ class _TaskProgressCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              QyIcon(
+              const QyIcon(
                 QyIcons.transfer,
                 size: 20,
                 color: QyColors.sky,
