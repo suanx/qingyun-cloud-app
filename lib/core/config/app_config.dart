@@ -3,13 +3,13 @@ abstract final class AppConfig {
   static const String appName = '轻云';
 
   /// 应用版本号（与 pubspec.yaml 的 version 保持一致；Android/iOS 随之同步）。
-  static const String appVersion = '0.1.11';
-  static const int buildNumber = 12;
-  static const String versionLabel = 'v0.1.11 (build 12)';
+  static const String appVersion = '0.1.12';
+  static const int buildNumber = 13;
+  static const String versionLabel = 'v0.1.12 (build 13)';
 
-  /// 后端服务基地址：lanflare（Cloudflare Workers / VPS Docker 均可）。
-  /// 替换为你的实际部署地址，例如 https://lanflare.<你的子域>.workers.dev
-  static const String apiBaseUrl = 'https://lanflare.example.workers.dev';
+  /// 后端服务基地址：lanflare（Cloudflare Workers，自定义域，国内可达）。
+  /// 登录账号密码 = lanflare 的 APP_USERNAME / APP_PASSWORD。
+  static const String apiBaseUrl = 'https://lz.miro.us.ci';
 
   /// true：使用内置示例数据展示 UI（无后端也可运行）。
   /// false：所有页面走 [ApiClient] 请求 lanflare 后端。
