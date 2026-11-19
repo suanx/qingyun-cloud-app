@@ -12,7 +12,6 @@ import '../../features/search/search_screen.dart';
 import '../../features/storage/storage_screen.dart';
 import '../../features/transfers/transfers_screen.dart';
 import '../config/app_config.dart';
-import '../network/api_client.dart';
 import '../network/token_store.dart';
 
 /// App 路由表：对齐高保真原型的 8 个页面。

@@ -22,8 +22,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final CloudRepository _repo = CloudRepository();
 
   late final Future<StorageSummary> _summaryFuture = _repo.storageSummary();
-  late final Future<int> _fileCountFuture =
-      _repo.files().then((files) => files.length);
   late final Future<int> _shareCountFuture = _repo.shareCount();
   late final Future<int> _trashCountFuture = _repo.trashCount();
 

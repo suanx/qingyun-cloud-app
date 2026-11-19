@@ -4,6 +4,7 @@ import '../config/app_config.dart';
 import '../models/cloud_models.dart';
 import '../models/transfer_store.dart';
 import 'api_client.dart';
+import 'api_exception.dart';
 import 'token_store.dart';
 
 /// 数据仓库：统一「本地示例数据」与「lanflare 后端」两条路径。
