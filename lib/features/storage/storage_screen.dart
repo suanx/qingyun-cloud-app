@@ -59,7 +59,7 @@ class _StorageScreenState extends State<StorageScreen> {
           ),
           const SizedBox(height: 8),
           _Donut(summary: _summary),
-          const _LegendGrid(),
+          _LegendGrid(byCategory: _summary?.byCategory),
           const _CleanCard(),
           const _UpgradeCard(),
           const ProtoFootNote('空间每 5 分钟同步一次',
@@ -143,10 +143,22 @@ class _Donut extends StatelessWidget {
 }
 
 class _LegendGrid extends StatelessWidget {
-  const _LegendGrid();
+  const _LegendGrid({this.byCategory});
+
+  final StorageCategoryStats? byCategory;
+
+  static const double _gb = 1024 * 1024 * 1024;
+
+  String _gbText(int bytes) => (bytes / _gb).toStringAsFixed(1);
 
   @override
   Widget build(BuildContext context) {
+    final StorageCategoryStats stats = byCategory ?? const StorageCategoryStats();
+    final String image = _gbText(stats.image);
+    final String video = _gbText(stats.video);
+    final String doc = _gbText(stats.doc);
+    final String other =
+        _gbText(stats.music + stats.archive);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       child: Column(
@@ -156,15 +168,15 @@ class _LegendGrid extends StatelessWidget {
               _LegendItem(
                 color: const Color(0xFF4C8DFF),
                 name: '照片',
-                value: '62.4',
-                onTap: () => showQyToast(context, '照片：62.4 GB'),
+                value: image,
+                onTap: () => showQyToast(context, '照片：$image GB'),
               ),
               const SizedBox(width: 10),
               _LegendItem(
                 color: QyColors.mint,
                 name: '视频',
-                value: '51.8',
-                onTap: () => showQyToast(context, '视频：51.8 GB'),
+                value: video,
+                onTap: () => showQyToast(context, '视频：$video GB'),
               ),
             ],
           ),
@@ -174,15 +186,15 @@ class _LegendGrid extends StatelessWidget {
               _LegendItem(
                 color: QyColors.amber,
                 name: '文档',
-                value: '34.6',
-                onTap: () => showQyToast(context, '文档：34.6 GB'),
+                value: doc,
+                onTap: () => showQyToast(context, '文档：$doc GB'),
               ),
               const SizedBox(width: 10),
               _LegendItem(
                 color: const Color(0xFFA78BFF),
-                name: '其他',
-                value: '25.4',
-                onTap: () => showQyToast(context, '其他：25.4 GB'),
+                name: '音乐/压缩包',
+                value: other,
+                onTap: () => showQyToast(context, '音乐/压缩包：$other GB'),
               ),
             ],
           ),

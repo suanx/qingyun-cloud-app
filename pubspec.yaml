@@ -23,6 +23,12 @@ dependencies:
   # 登录凭证持久化（TokenStore；正式可升级 flutter_secure_storage）
   shared_preferences: ^2.2.0
 
+  # 前端核心能力（锁定与 CI Flutter 3.24.5 兼容的版本，避免 ^ 拉到新 SDK 要求的版本）
+  file_picker: 8.1.7
+  path_provider: 2.1.5
+  open_filex: 4.6.0
+  video_player: 2.9.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

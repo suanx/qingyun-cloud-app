@@ -106,6 +106,23 @@ class ApiClient {
         ));
   }
 
+  /// 下载到指定本地路径（Dio 直写文件，自动带鉴权头，支持进度回调）。
+  /// 用于「下载并打开」链路：文件保存到应用私有目录后交给 open_filex。
+  Future<void> downloadToFile(
+    String path,
+    String savePath, {
+    Map<String, dynamic>? query,
+    void Function(int received, int total)? onReceiveProgress,
+  }) async {
+    await _guard(() => _dio.download<dynamic>(
+          path,
+          savePath,
+          queryParameters: query,
+          onReceiveProgress: onReceiveProgress,
+          options: Options(followRedirects: true),
+        ));
+  }
+
   /// 上传原始字节流（lanflare /api/upload：raw body + `X-Heri-Name` 头）。
   Future<dynamic> uploadStream(
     String path, {

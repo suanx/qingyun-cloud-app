@@ -80,7 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       background: QyColors.primaryLight,
                       label: '我的分享',
                       value: _countText(_shareCountFuture, suffix: ' 个链接'),
-                      onTap: () => context.go(QyRoutes.files),
+                      onTap: () => context.go('/my-shares'),
                     ),
                     _MeCell(
                       icon: Icons.delete_outline,
@@ -88,7 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       background: QyColors.pinkSoft,
                       label: '回收站',
                       value: _countText(_trashCountFuture, suffix: ''),
-                      onTap: () => context.go(QyRoutes.files),
+                      onTap: () => context.go(QyRoutes.trash),
                     ),
                     _MeCell(
                       icon: Icons.cloud_download,

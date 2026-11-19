@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/cloud_models.dart';
 import '../../core/network/api_exception.dart';
@@ -19,17 +20,43 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   final CloudRepository _repo = CloudRepository();
 
-  static const List<String> _history = <String>[
-    '项目方案',
-    '旅行',
-    '合同',
-    '家庭账单',
-    '设计稿',
-  ];
+  static const String _historyKey = 'qingyun_search_history';
+
+  List<String> _history = <String>[];
 
   bool _searching = false;
   String _query = '';
   List<CloudFile> _results = <CloudFile>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() => _history = prefs.getStringList(_historyKey) ?? <String>[]);
+  }
+
+  Future<void> _addHistory(String query) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<String> updated = <String>[
+      query,
+      ..._history.where((String item) => item != query),
+    ].take(8).toList();
+    await prefs.setStringList(_historyKey, updated);
+    if (mounted) setState(() => _history = updated);
+  }
+
+  Future<void> _clearHistory() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_historyKey);
+    if (!mounted) return;
+    setState(() => _history = <String>[]);
+    showQyToast(context, '搜索历史已清空', success: true);
+  }
 
   @override
   void dispose() {
@@ -45,6 +72,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _searching = true;
       _query = q;
     });
+    await _addHistory(q);
     try {
       final files = await _repo.files(keyword: q);
       if (!mounted) return;
@@ -102,7 +130,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel)),
                   const Spacer(),
                   QyTapScale(
-                    onTap: () => showQyToast(context, '已清空搜索历史'),
+                    onTap: _clearHistory,
                     child: const Icon(Icons.delete_outline, size: 17, color: QyColors.hint),
                   ),
                 ],
@@ -273,7 +301,7 @@ class _ResultList extends StatelessWidget {
           children: <Widget>[
             for (final file in files)
               QyTapScale(
-                onTap: () => context.go(QyRoutes.preview),
+                onTap: () => context.go(QyRoutes.preview, extra: file),
                 child: Container(
                   decoration: const BoxDecoration(
                     border: Border(top: BorderSide(color: QyColors.divider)),

@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'dart:typed_data';
+
+import 'package:path_provider/path_provider.dart';
 
 import '../config/app_config.dart';
 import '../models/cloud_models.dart';
@@ -62,6 +65,9 @@ class CloudRepository {
     return StorageSummary(
       usedGb: usedBytes / _bytesPerGb,
       totalGb: totalBytes / _bytesPerGb,
+      byCategory: StorageCategoryStats.fromJson(
+        data['by_category'] as Map<String, dynamic>?,
+      ),
     );
   }
 
@@ -74,6 +80,8 @@ class CloudRepository {
   Future<List<CloudFile>> files({
     FileCategory category = FileCategory.all,
     String? keyword,
+    int pid = 0,
+    bool includeDirs = false,
   }) async {
     if (AppConfig.useMockData) {
       return MockData.files(category: category, keyword: keyword);
@@ -81,7 +89,7 @@ class CloudRepository {
     final query = keyword?.trim() ?? '';
     final Map<String, dynamic> data;
     if (query.isEmpty) {
-      data = await _client.getRaw('/api/list', query: <String, dynamic>{'pid': 0})
+      data = await _client.getRaw('/api/list', query: <String, dynamic>{'pid': pid})
           as Map<String, dynamic>;
     } else {
       data = await _client.getRaw('/api/search', query: <String, dynamic>{'q': query})
@@ -89,10 +97,46 @@ class CloudRepository {
     }
     final items = _itemsOf(data);
     return items
-        .where((node) => node['type'] == 'file')
+        .where((node) => includeDirs || node['type'] == 'file')
         .map(_fileFromNode)
         .where((file) => category == FileCategory.all || file.category == category)
         .toList();
+  }
+
+  /// 新建文件夹（lanflare `POST /api/mkdir`，`ensure:true` 复用同名目录）。
+  Future<CloudFile> createFolder(String name, {int pid = 0}) async {
+    final data = await _client.postRaw('/api/mkdir', body: <String, dynamic>{
+      'pid': pid,
+      'name': name,
+      'ensure': true,
+    }) as Map<String, dynamic>;
+    final node = data['node'];
+    if (node is Map<String, dynamic>) return _fileFromNode(node);
+    return CloudFile(
+      id: '',
+      name: name,
+      category: FileCategory.other,
+      sizeLabel: '0 B',
+      updatedLabel: '刚刚',
+      isDir: true,
+      pid: pid,
+    );
+  }
+
+  /// 重命名（lanflare `POST /api/rename`）。
+  Future<void> renameFile(String fileId, String newName) async {
+    await _client.postRaw('/api/rename', body: <String, dynamic>{
+      'id': int.tryParse(fileId) ?? 0,
+      'name': newName,
+    });
+  }
+
+  /// 移动文件（lanflare `POST /api/move`）。
+  Future<void> moveFiles(List<String> ids, int targetPid) async {
+    await _client.postRaw('/api/move', body: <String, dynamic>{
+      'ids': _toIntIds(ids),
+      'pid': targetPid,
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -141,6 +185,29 @@ class CloudRepository {
     if (AppConfig.useMockData) return MockData.trashFiles.length;
     final data = await _client.getRaw('/api/bin') as Map<String, dynamic>;
     return _itemsOf(data).where((node) => node['type'] == 'file').length;
+  }
+
+  /// 我的分享列表（lanflare `GET /api/my-shares`）。
+  Future<List<ShareItem>> myShares() async {
+    if (AppConfig.useMockData) return const <ShareItem>[];
+    final data = await _client.getRaw('/api/my-shares') as Map<String, dynamic>;
+    return _itemsOf(data).map((item) {
+      return ShareItem(
+        id: item['id']?.toString() ?? '',
+        name: item['name']?.toString() ?? '未命名分享',
+        kind: item['kind']?.toString() ?? 'file',
+        createdAt: (item['created_at'] as num? ?? 0).toInt(),
+        expiresAt: (item['expires_at'] as num? ?? 0).toInt(),
+        downloads: (item['downloads'] as num? ?? 0).toInt(),
+        maxDownloads: (item['max_downloads'] as num? ?? 0).toInt(),
+        hasPassword: (item['password']?.toString().isNotEmpty ?? false),
+      );
+    }).toList();
+  }
+
+  /// 撤销分享（lanflare `DELETE /api/shares/:id`）。
+  Future<void> deleteShare(String shareId) async {
+    await _client.deleteRaw('/api/shares/$shareId');
   }
 
   /// 生成分享链接（lanflare `POST /api/share`），返回公开下载网址。
@@ -214,6 +281,156 @@ class CloudRepository {
     }
   }
 
+  /// 在线预览：换取短期签名 URL（`GET /api/preview/url`）。
+  ///
+  /// 该 URL 可直接交给 Image.network / video_player，无需 Authorization 头；
+  /// 15 分钟后过期，重新调用本方法即可续期。
+  Future<PreviewInfo> previewInfo(String fileId) async {
+    final data = await _client.getRaw(
+      '/api/preview/url',
+      query: <String, dynamic>{'id': int.tryParse(fileId) ?? 0},
+    ) as Map<String, dynamic>;
+    return PreviewInfo.fromJson(data);
+  }
+
+  /// 下载文件到应用私有目录（`GET /api/stream` + Dio 直写文件），
+  /// 并返回本地路径供 open_filex 打开。进度写入本地传输任务模型。
+  Future<String> downloadFile({
+    required String fileId,
+    required String name,
+    String? directory,
+  }) async {
+    final saveDir = directory ?? await _downloadDirectory();
+    final safeName = _safeFileName(name);
+    final savePath = '$saveDir${Platform.pathSeparator}$safeName';
+    final taskId = LocalTransferStore.instance.start(
+      name: name,
+      direction: TransferDirection.download,
+      sizeLabel: '下载中',
+    );
+    try {
+      await _client.downloadToFile(
+        '/api/stream',
+        savePath,
+        query: <String, dynamic>{'id': int.tryParse(fileId) ?? 0},
+        onReceiveProgress: (int received, int total) {
+          LocalTransferStore.instance.updateProgress(
+            taskId,
+            total <= 0 ? 0 : received / total,
+          );
+        },
+      );
+      LocalTransferStore.instance.complete(taskId);
+      return savePath;
+    } on ApiException {
+      LocalTransferStore.instance.fail(taskId);
+      rethrow;
+    } catch (_) {
+      LocalTransferStore.instance.fail(taskId);
+      rethrow;
+    }
+  }
+
+  /// 应用私有下载目录（不存在则创建）。
+  static Future<String> _downloadDirectory() async {
+    final base = await getApplicationDocumentsDirectory();
+    final dir = Directory('${base.path}${Platform.pathSeparator}downloads');
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return dir.path;
+  }
+
+  /// 跨平台安全文件名：替换路径分隔符与 Windows 保留字符。
+  static String _safeFileName(String name) {
+    final cleaned = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
+    return cleaned.isEmpty ? 'download.bin' : cleaned;
+  }
+
+  /// 从本地路径上传：≤90MB 走单请求，>90MB 自动分块（8MB/块）。
+  Future<CloudFile> uploadPath({
+    required String path,
+    required String name,
+    int pid = 0,
+  }) async {
+    final file = File(path);
+    final length = await file.length();
+    if (length <= 0) {
+      throw ApiException.badResponse(400, '文件为空，无法上传');
+    }
+    if (length <= AppConfig.maxUploadBytes) {
+      return upload(
+        name: name,
+        bytes: file.openRead().map((List<int> b) => Uint8List.fromList(b)),
+        length: length,
+        pid: pid,
+      );
+    }
+    return _uploadChunked(file: file, name: name, length: length, pid: pid);
+  }
+
+  /// 分块上传（lanflare `POST /api/upload/chunk`）。
+  /// 头：X-Heri-Upload-Id / Chunk-Index / Chunk-Total / Finalize。
+  Future<CloudFile> _uploadChunked({
+    required File file,
+    required String name,
+    required int length,
+    required int pid,
+  }) async {
+    const int chunkSize = 8 * 1024 * 1024;
+    final int total = (length / chunkSize).ceil();
+    final String uploadId = DateTime.now().microsecondsSinceEpoch.toString();
+    final String taskId = LocalTransferStore.instance.start(
+      name: name,
+      direction: TransferDirection.upload,
+      sizeLabel: humanSize(length),
+    );
+    int sent = 0;
+    Map<String, dynamic>? lastData;
+    try {
+      for (int i = 0; i < total; i++) {
+        final int start = i * chunkSize;
+        final int end = (start + chunkSize > length) ? length : start + chunkSize;
+        final Map<String, String> headers = <String, String>{
+          'X-Heri-Name': Uri.encodeComponent(name),
+          'X-Heri-Upload-Id': uploadId,
+          'X-Heri-Chunk-Index': '$i',
+          'X-Heri-Chunk-Total': '$total',
+          if (i == total - 1) 'X-Heri-Finalize': '1',
+        };
+        final dynamic data = await _client.uploadStream(
+          '/api/upload/chunk?pid=$pid',
+          body: file.openRead(start, end).map((List<int> b) => Uint8List.fromList(b)),
+          length: end - start,
+          headers: headers,
+          onSendProgress: (int chunkSent, int _) {
+            final double ratio = (sent + chunkSent) / length;
+            LocalTransferStore.instance.updateProgress(
+              taskId,
+              ratio > 0.99 ? 0.99 : ratio,
+            );
+          },
+        );
+        sent = end;
+        if (data is Map<String, dynamic>) lastData = data;
+      }
+      LocalTransferStore.instance.complete(taskId);
+      final Object? node = lastData?['node'];
+      if (node is Map<String, dynamic>) return _fileFromNode(node);
+      return CloudFile(
+        id: '',
+        name: name,
+        category: FileCategoryX.fromFileName(name),
+        sizeLabel: humanSize(length),
+        updatedLabel: '刚刚',
+      );
+    } on ApiException {
+      LocalTransferStore.instance.fail(taskId);
+      rethrow;
+    } catch (_) {
+      LocalTransferStore.instance.fail(taskId);
+      rethrow;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // 传输任务（本地模型）
   // ---------------------------------------------------------------------------
@@ -230,13 +447,19 @@ class CloudRepository {
 
   CloudFile _fileFromNode(Map<String, dynamic> node) {
     final name = node['name']?.toString() ?? '（未命名文件）';
+    final bool isDir = node['type']?.toString() == 'dir';
+    final int sizeBytes = (node['size_bytes'] as num?)?.toInt() ?? 0;
     return CloudFile(
       id: node['id']?.toString() ?? '',
       name: name,
-      category: FileCategoryX.fromFileName(name),
-      sizeLabel: humanSize((node['size_bytes'] as num?)?.toInt() ?? 0),
+      category: isDir ? FileCategory.other : FileCategoryX.fromFileName(name),
+      sizeLabel: isDir ? '文件夹' : humanSize(sizeBytes),
       updatedLabel: relativeTime((node['created_at'] as num?)?.toInt() ?? 0),
       starred: false,
+      sizeBytes: sizeBytes,
+      createdAt: (node['created_at'] as num?)?.toInt() ?? 0,
+      isDir: isDir,
+      pid: (node['pid'] as num?)?.toInt() ?? 0,
     );
   }
 

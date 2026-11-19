@@ -9,9 +9,12 @@ import '../../features/login/login_screen.dart';
 import '../../features/preview/preview_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/shares/shares_screen.dart';
 import '../../features/storage/storage_screen.dart';
 import '../../features/transfers/transfers_screen.dart';
+import '../../features/trash/trash_screen.dart';
 import '../config/app_config.dart';
+import '../models/cloud_models.dart';
 import '../network/token_store.dart';
 
 /// App 路由表：对齐高保真原型的 8 个页面。
@@ -36,7 +39,6 @@ abstract final class AppRouter {
     QyRoutes.splash: QyRoutes.home,
     QyRoutes.transferFiles: QyRoutes.transfers,
     QyRoutes.share: QyRoutes.preview,
-    QyRoutes.trash: QyRoutes.files,
     QyRoutes.states: QyRoutes.files,
     gallery: QyRoutes.album,
     allFiles: QyRoutes.files,
@@ -49,6 +51,9 @@ abstract final class AppRouter {
 
   /// 登录页（对接 lanflare 时未登录一律先到这里）。
   static const String login = '/login';
+
+  /// 我的分享：后端 GET /api/my-shares + DELETE /api/shares/:id。
+  static const String myShares = '/my-shares';
 
   /// 登录态守卫：未登录跳登录页；已登录访问登录页回首页。
   /// mock 模式（useMockData = true）不强制登录。
@@ -91,7 +96,16 @@ abstract final class AppRouter {
       ),
       GoRoute(path: QyRoutes.search, builder: (_, __) => const SearchScreen()),
       GoRoute(path: QyRoutes.storage, builder: (_, __) => const StorageScreen()),
-      GoRoute(path: QyRoutes.preview, builder: (_, __) => const PreviewScreen()),
+      GoRoute(path: QyRoutes.trash, builder: (_, __) => const TrashScreen()),
+      GoRoute(path: myShares, builder: (_, __) => const SharesScreen()),
+      GoRoute(
+        path: QyRoutes.preview,
+        // 预览必须携带文件对象；无参时回到文件页，避免旧占位页重现。
+        redirect: (_, GoRouterState state) =>
+            state.extra is CloudFile ? null : QyRoutes.files,
+        builder: (_, GoRouterState state) =>
+            PreviewScreen(file: state.extra! as CloudFile),
+      ),
       GoRoute(path: QyRoutes.album, builder: (_, __) => const AlbumScreen()),
       for (final MapEntry<String, String> entry in _redirects.entries)
         GoRoute(path: entry.key, redirect: (_, __) => entry.value),

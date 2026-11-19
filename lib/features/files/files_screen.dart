@@ -5,6 +5,7 @@ import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 import '../../core/models/cloud_models.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/utils/upload_helper.dart';
 import '../../widgets/proto_widgets.dart';
 
 /// 02 全部文件（对齐 screen-files）。数据来自 lanflare（/api/list、/api/search）。
@@ -19,9 +20,11 @@ class _FilesScreenState extends State<FilesScreen> {
   final CloudRepository _repo = CloudRepository();
 
   int _chip = 0;
+  int _pid = 0;
   bool _loading = true;
   String? _error;
   List<CloudFile> _files = <CloudFile>[];
+  List<CloudFile> _folders = <CloudFile>[];
 
   static const List<String> _chips = <String>['全部', '文档', '图片', '视频', '音频'];
   static const List<FileCategory> _categories = <FileCategory>[
@@ -44,10 +47,15 @@ class _FilesScreenState extends State<FilesScreen> {
       _error = null;
     });
     try {
-      final files = await _repo.files(category: _categories[_chip]);
+      final nodes = await _repo.files(
+        category: _categories[_chip],
+        pid: _pid,
+        includeDirs: true,
+      );
       if (!mounted) return;
       setState(() {
-        _files = files;
+        _folders = nodes.where((CloudFile n) => n.isDir).toList();
+        _files = nodes.where((CloudFile n) => !n.isDir).toList();
         _loading = false;
       });
     } on ApiException catch (error) {
@@ -65,6 +73,88 @@ class _FilesScreenState extends State<FilesScreen> {
     }
   }
 
+  /// FAB 操作菜单：上传 / 新建文件夹（均走真实接口）。
+  Future<void> _showActions() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.cloud_upload),
+              title: const Text('上传文件'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _upload();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.create_new_folder),
+              title: const Text('新建文件夹'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _createFolder();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _upload() async {
+    try {
+      final CloudFile? file = await UploadHelper.pickAndUpload(pid: _pid);
+      if (file == null || !mounted) return;
+      showQyToast(context, '已上传 ${file.name}', success: true);
+      await _load();
+    } catch (e) {
+      if (mounted) showQyToast(context, '上传失败：$e');
+    }
+  }
+
+  Future<void> _createFolder() async {
+    final TextEditingController controller = TextEditingController();
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('新建文件夹'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '输入文件夹名称'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+    try {
+      await _repo.createFolder(name, pid: _pid);
+      if (!mounted) return;
+      showQyToast(context, '文件夹已创建', success: true);
+      await _load();
+    } catch (e) {
+      if (mounted) showQyToast(context, '创建失败：$e');
+    }
+  }
+
+  void _openFolder(CloudFile folder) {
+    final int? id = int.tryParse(folder.id);
+    if (id == null || id <= 0) return;
+    setState(() => _pid = id);
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     // 红框区域（标题 / 面包屑 / 右上按钮 + 筛选胶囊 + 四个文件夹）固定不滚动，
@@ -79,8 +169,8 @@ class _FilesScreenState extends State<FilesScreen> {
             children: <Widget>[
               ProtoNav(
                 title: '全部文件',
-                subtitle: '我的云盘',
-                subIcon: Icons.home,
+                subtitle: _pid == 0 ? '我的云盘' : '当前目录 #$_pid',
+                subIcon: _pid == 0 ? Icons.home : Icons.folder,
                 actions: <Widget>[
                   ProtoIconButton(icon: Icons.search, onTap: () => context.go(QyRoutes.search)),
                   ProtoIconButton(
@@ -101,7 +191,7 @@ class _FilesScreenState extends State<FilesScreen> {
                   _load();
                 },
               ),
-              const _FolderGrid(),
+              _FolderGrid(folders: _folders, onTap: _openFolder),
               Expanded(
                 child: ListView(
                   physics: qyProtoScrollPhysics,
@@ -145,7 +235,7 @@ class _FilesScreenState extends State<FilesScreen> {
           Positioned(
             right: 18,
             bottom: 22,
-            child: _Fab(onTap: () => showQyToast(context, '新建 / 上传 / 扫描')),
+            child: _Fab(onTap: _showActions),
           ),
         ],
       ),
@@ -154,55 +244,53 @@ class _FilesScreenState extends State<FilesScreen> {
 }
 
 class _FolderGrid extends StatelessWidget {
-  const _FolderGrid();
+  const _FolderGrid({required this.folders, required this.onTap});
+
+  final List<CloudFile> folders;
+  final ValueChanged<CloudFile> onTap;
+
+  static const List<Color> _colors = <Color>[
+    Color(0xFF4C8DFF),
+    QyColors.mint,
+    QyColors.amber,
+    Color(0xFFA78BFF),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    if (folders.isEmpty) return const SizedBox.shrink();
+    final List<Widget> rows = <Widget>[];
+    for (int i = 0; i < folders.length; i += 2) {
+      final CloudFile first = folders[i];
+      final CloudFile? second = i + 1 < folders.length ? folders[i + 1] : null;
+      rows.add(
+        Row(
+          children: <Widget>[
+            _FolderCard(
+              icon: Icons.folder,
+              color: _colors[i % _colors.length],
+              name: first.name,
+              meta: first.updatedLabel,
+              onTap: () => onTap(first),
+            ),
+            if (second != null) ...<Widget>[
+              const SizedBox(width: 10),
+              _FolderCard(
+                icon: Icons.folder,
+                color: _colors[(i + 1) % _colors.length],
+                name: second.name,
+                meta: second.updatedLabel,
+                onTap: () => onTap(second),
+              ),
+            ],
+          ],
+        ),
+      );
+      rows.add(const SizedBox(height: 10));
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-      child: Column(
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              _FolderCard(
-                icon: Icons.folder,
-                color: const Color(0xFF4C8DFF),
-                name: '工作资料',
-                meta: '24 个文件 · 8.6 GB',
-                onTap: () => showQyToast(context, '进入「工作资料」'),
-              ),
-              const SizedBox(width: 10),
-              _FolderCard(
-                icon: Icons.folder,
-                color: QyColors.mint,
-                name: '我的照片',
-                meta: '1,284 张 · 42.1 GB',
-                onTap: () => context.go(QyRoutes.album),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              _FolderCard(
-                icon: Icons.folder,
-                color: QyColors.amber,
-                name: '学习资料',
-                meta: '86 个文件 · 12.4 GB',
-                onTap: () => showQyToast(context, '进入「学习资料」'),
-              ),
-              const SizedBox(width: 10),
-              _FolderCard(
-                icon: Icons.folder_shared,
-                color: const Color(0xFFA78BFF),
-                name: '家庭共享',
-                meta: '3 位成员 · 6.2 GB',
-                onTap: () => showQyToast(context, '进入「家庭共享」'),
-              ),
-            ],
-          ),
-        ],
-      ),
+      child: Column(children: rows),
     );
   }
 }
@@ -275,7 +363,7 @@ class _FileList extends StatelessWidget {
           for (final file in files)
             _FileRow(
               file: file,
-              onTap: () => context.go(QyRoutes.preview),
+              onTap: () => context.go(QyRoutes.preview, extra: file),
             ),
         ],
       ),

@@ -60,6 +60,10 @@ class CloudFile {
     required this.sizeLabel,
     required this.updatedLabel,
     this.starred = false,
+    this.sizeBytes = 0,
+    this.createdAt = 0,
+    this.isDir = false,
+    this.pid = 0,
   });
 
   final String id;
@@ -68,6 +72,14 @@ class CloudFile {
   final String sizeLabel;
   final String updatedLabel;
   final bool starred;
+
+  /// 后端原始字节数与创建时间（毫秒），用于预览/下载与排序。
+  final int sizeBytes;
+  final int createdAt;
+
+  /// true = 目录节点（lanflare type='dir'），前端可做目录钻取。
+  final bool isDir;
+  final int pid;
 
   static CloudFile fromJson(Map<String, dynamic> json) => CloudFile(
         id: json['id']?.toString() ?? '',
@@ -82,15 +94,46 @@ class CloudFile {
       );
 }
 
+/// 容量分类统计（后端 `GET /api/storage/summary` 的 by_category 字段，单位字节）。
+class StorageCategoryStats {
+  const StorageCategoryStats({
+    this.image = 0,
+    this.video = 0,
+    this.music = 0,
+    this.doc = 0,
+    this.archive = 0,
+  });
+
+  final int image;
+  final int video;
+  final int music;
+  final int doc;
+  final int archive;
+
+  factory StorageCategoryStats.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const StorageCategoryStats();
+    int val(String key) => (json[key] as num? ?? 0).toInt();
+    return StorageCategoryStats(
+      image: val('image'),
+      video: val('video'),
+      music: val('music'),
+      doc: val('doc'),
+      archive: val('archive'),
+    );
+  }
+}
+
 /// 容量概览（首页 / 容量管理共用）。
 class StorageSummary {
   const StorageSummary({
     required this.usedGb,
     required this.totalGb,
+    this.byCategory = const StorageCategoryStats(),
   });
 
   final double usedGb;
   final double totalGb;
+  final StorageCategoryStats byCategory;
 
   double get ratio => totalGb <= 0 ? 0 : (usedGb / totalGb).clamp(0.0, 1.0);
 
@@ -104,8 +147,69 @@ class StorageSummary {
     return StorageSummary(
       usedGb: used < 0 ? 0 : used,
       totalGb: total,
+      byCategory: StorageCategoryStats.fromJson(
+        json['by_category'] as Map<String, dynamic>?,
+      ),
     );
   }
+}
+
+/// 在线预览信息（后端 `GET /api/preview/url`）。
+///
+/// [url] 为短期签名地址，图片/视频组件可直接加载（无需 Authorization 头）；
+/// 过期后需重新调用仓库的 previewInfo() 换取新链接。
+class PreviewInfo {
+  const PreviewInfo({
+    required this.url,
+    required this.name,
+    required this.sizeBytes,
+    required this.contentType,
+    required this.expiresAt,
+  });
+
+  final String url;
+  final String name;
+  final int sizeBytes;
+  final String contentType;
+  final int expiresAt;
+
+  bool get isImage => contentType.startsWith('image/');
+  bool get isVideo => contentType.startsWith('video/');
+  bool get isAudio => contentType.startsWith('audio/');
+  bool get isText =>
+      contentType.startsWith('text/') || contentType == 'application/json';
+  bool get isPdf => contentType == 'application/pdf';
+
+  factory PreviewInfo.fromJson(Map<String, dynamic> json) => PreviewInfo(
+        url: json['url']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        sizeBytes: (json['size_bytes'] as num? ?? 0).toInt(),
+        contentType: json['content_type']?.toString() ?? 'application/octet-stream',
+        expiresAt: (json['expires_at'] as num? ?? 0).toInt(),
+      );
+}
+
+/// 我的分享条目（后端 `GET /api/my-shares`）。
+class ShareItem {
+  const ShareItem({
+    required this.id,
+    required this.name,
+    required this.kind,
+    required this.createdAt,
+    required this.downloads,
+    required this.maxDownloads,
+    this.expiresAt = 0,
+    this.hasPassword = false,
+  });
+
+  final String id;
+  final String name;
+  final String kind;
+  final int createdAt;
+  final int downloads;
+  final int maxDownloads;
+  final int expiresAt;
+  final bool hasPassword;
 }
 
 /// 传输任务（传输任务场景）。

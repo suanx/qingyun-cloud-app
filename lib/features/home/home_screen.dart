@@ -6,6 +6,7 @@ import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
 import '../../core/models/cloud_models.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/utils/upload_helper.dart';
 import '../../widgets/proto_widgets.dart';
 
 /// 01 首页 · 存储概览（对齐 screen-home）。容量与最近文件来自 lanflare。
@@ -44,6 +45,53 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// 选择本地文件并上传（自动分块大文件）。
+  Future<void> _upload() async {
+    try {
+      final CloudFile? file = await UploadHelper.pickAndUpload();
+      if (file == null || !mounted) return;
+      showQyToast(context, '已上传 ${file.name}', success: true);
+      await _load();
+    } catch (e) {
+      if (mounted) showQyToast(context, '上传失败：$e');
+    }
+  }
+
+  /// 新建文件夹（lanflare POST /api/mkdir）。
+  Future<void> _createFolder() async {
+    final TextEditingController controller = TextEditingController();
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('新建文件夹'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '输入文件夹名称'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+    try {
+      await _repo.createFolder(name);
+      if (!mounted) return;
+      showQyToast(context, '文件夹已创建', success: true);
+      await _load();
+    } catch (e) {
+      if (mounted) showQyToast(context, '创建失败：$e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // 头图（渐变 + 问候语 + 右上角按钮）固定不滚动，下方内容区单独滚动。
@@ -73,13 +121,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.only(bottom: 96),
                     children: <Widget>[
                       _StorageCard(summary: _summary, onTap: () => context.go(QyRoutes.storage)),
-                      const _QuickGrid(),
+                      _QuickGrid(
+                        onUpload: _upload,
+                        onCreateFolder: _createFolder,
+                      ),
                       ProtoSectionHead(
                         title: '最近文件',
                         more: '全部',
                         onMore: () => context.go(QyRoutes.files),
                       ),
-                      _RecentRow(files: _recent, onTap: () => context.go(QyRoutes.preview)),
+                      _RecentRow(
+                        files: _recent,
+                        onTap: (CloudFile file) =>
+                            context.go(QyRoutes.preview, extra: file),
+                      ),
                       const ProtoSectionHead(
                         title: '为你推荐',
                         padding: EdgeInsets.fromLTRB(18, 20, 18, 2),
@@ -391,7 +446,13 @@ class _UpgradeButton extends StatelessWidget {
 
 /// 四宫格快捷入口。
 class _QuickGrid extends StatelessWidget {
-  const _QuickGrid();
+  const _QuickGrid({
+    required this.onUpload,
+    required this.onCreateFolder,
+  });
+
+  final VoidCallback onUpload;
+  final VoidCallback onCreateFolder;
 
   @override
   Widget build(BuildContext context) {
@@ -404,14 +465,14 @@ class _QuickGrid extends StatelessWidget {
             iconColor: QyColors.primary,
             background: QyColors.primaryLight,
             label: '上传',
-            onTap: () => showQyToast(context, '选择文件上传中…'),
+            onTap: onUpload,
           ),
           _QuickItem(
             icon: Icons.create_new_folder,
             iconColor: QyColors.mintDeep,
             background: QyColors.mintSoft,
             label: '新建',
-            onTap: () => showQyToast(context, '新建文件夹'),
+            onTap: onCreateFolder,
           ),
           _QuickItem(
             icon: Icons.swap_vert,
@@ -425,7 +486,7 @@ class _QuickGrid extends StatelessWidget {
             iconColor: QyColors.violetDeep,
             background: QyColors.violetSoft,
             label: '回收站',
-            onTap: () => showQyToast(context, '回收站：12 个文件'),
+            onTap: () => context.go(QyRoutes.trash),
           ),
         ],
       ),
@@ -484,7 +545,7 @@ class _RecentRow extends StatelessWidget {
   const _RecentRow({required this.files, required this.onTap});
 
   final List<CloudFile> files;
-  final VoidCallback onTap;
+  final ValueChanged<CloudFile> onTap;
 
   static const List<List<Color>> _palette = <List<Color>>[
     <Color>[Color(0xFF4C8DFF), Color(0xFF7FB6FF)],
@@ -522,7 +583,7 @@ class _RecentRow extends StatelessWidget {
                 iconColor: QyColors.muted,
                 name: '暂无最近文件',
                 meta: '上传后在这里展示',
-                onTap: onTap,
+                onTap: () {},
               )
             else
               for (var i = 0; i < files.length; i++)
@@ -534,7 +595,7 @@ class _RecentRow extends StatelessWidget {
                     if (files[i].updatedLabel.isNotEmpty) files[i].updatedLabel,
                     if (files[i].sizeLabel.isNotEmpty) files[i].sizeLabel,
                   ].join(' · '),
-                  onTap: onTap,
+                  onTap: () => onTap(files[i]),
                 ),
           ],
         ),
