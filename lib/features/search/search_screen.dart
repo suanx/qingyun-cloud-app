@@ -274,14 +274,14 @@ class _ResultList extends StatelessWidget {
             for (final file in files)
               QyTapScale(
                 onTap: () => context.go(QyRoutes.preview),
-                child: const Container(
-                  decoration: BoxDecoration(
+                child: Container(
+                  decoration: const BoxDecoration(
                     border: Border(top: BorderSide(color: QyColors.divider)),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   child: Row(
                     children: <Widget>[
-                      ProtoTypeIcon(
+                      const ProtoTypeIcon(
                         icon: Icons.insert_drive_file,
                         color: QyColors.primary,
                         background: QyColors.primaryLight,
