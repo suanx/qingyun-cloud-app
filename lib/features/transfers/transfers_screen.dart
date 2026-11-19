@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/models/cloud_models.dart';
+import '../../core/models/transfer_store.dart';
 import '../../widgets/proto_widgets.dart';
 
-/// 03 传输中心（对齐 screen-transfer）。
+/// 03 传输中心（对齐 screen-transfer）。任务来自 App 本地传输记录
+/// （[LocalTransferStore]），上传/下载操作实时驱动进度。
 class TransfersScreen extends StatefulWidget {
   const TransfersScreen({super.key});
 
@@ -14,8 +17,6 @@ class TransfersScreen extends StatefulWidget {
 class _TransfersScreenState extends State<TransfersScreen> {
   int _chip = 0;
 
-  static const List<String> _chips = <String>['正在传输', '已完成', '失败 1'];
-
   @override
   Widget build(BuildContext context) {
     // 红框区域（标题 / 副标题 / 全部暂停 + 速度卡 + 筛选胶囊）固定不滚动，
@@ -23,87 +24,85 @@ class _TransfersScreenState extends State<TransfersScreen> {
     // .chip-row 的 flex-shrink:0 + .scroll flex:1。
     return ColoredBox(
       color: QyColors.canvas,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          ProtoNav(
-            title: '传输',
-            subtitle: '3 个任务进行中',
-            actions: <Widget>[
-              QyTapScale(
-                onTap: () => showQyToast(context, '已暂停全部任务'),
-                child: const Text('全部暂停', style: ProtoText.sectionMore),
+      child: ListenableBuilder(
+        listenable: LocalTransferStore.instance,
+        builder: (BuildContext context, _) {
+          final store = LocalTransferStore.instance;
+          final running = store.running;
+          final done = store.done;
+          final failed = store.failed;
+          final chips = <String>[
+            '正在传输',
+            '已完成',
+            failed.isEmpty ? '失败' : '失败 ${failed.length}',
+          ];
+          final visible = <List<TransferTask>>[running, done, failed][_chip];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              ProtoNav(
+                title: '传输',
+                subtitle: running.isEmpty ? '当前没有进行中的任务' : '${running.length} 个任务进行中',
+                actions: <Widget>[
+                  QyTapScale(
+                    onTap: () {
+                      for (final task in running) {
+                        store.pause(task.id);
+                      }
+                      showQyToast(context, running.isEmpty ? '没有进行中的任务' : '已暂停全部任务');
+                    },
+                    child: const Text('全部暂停', style: ProtoText.sectionMore),
+                  ),
+                ],
+              ),
+              const _SpeedCard(active: true),
+              ProtoChipRow(
+                labels: chips,
+                activeIndex: _chip,
+                onChanged: (int i) => setState(() => _chip = i),
+              ),
+              Expanded(
+                child: ListView(
+                  physics: qyProtoScrollPhysics,
+                  padding: const EdgeInsets.only(bottom: 100),
+                  children: <Widget>[
+                    if (visible.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+                        child: QyEmptyState(
+                          title: _chip == 0 ? '暂无进行中的任务' : (_chip == 1 ? '还没有已完成的任务' : '没有失败的任务'),
+                          description: _chip == 0
+                              ? '上传或下载文件时会在这里实时显示进度'
+                              : '切换其他筛选查看对应任务',
+                        ),
+                      )
+                    else ...<Widget>[
+                      for (final task in visible) _TransferCard(task: task),
+                    ],
+                    if (_chip == 0 && done.isNotEmpty) ...<Widget>[
+                      ProtoSectionHead(
+                        title: '今天已完成',
+                        more: '${done.length} 项',
+                        moreIcon: Icons.chevron_right,
+                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+                      ),
+                      _DoneList(tasks: done),
+                    ],
+                  ],
+                ),
               ),
             ],
-          ),
-          const _SpeedCard(),
-          ProtoChipRow(
-            labels: _chips,
-            activeIndex: _chip,
-            onChanged: (int i) => setState(() => _chip = i),
-          ),
-          Expanded(
-            child: ListView(
-              physics: qyProtoScrollPhysics,
-              padding: const EdgeInsets.only(bottom: 100),
-              children: const <Widget>[
-                _TransferCard(
-                  icon: Icons.movie,
-                  iconColor: QyColors.amberDeep,
-                  background: QyColors.amberSoft,
-                  name: '4K 风景素材.mp4',
-                  meta: '上传中 · 264 MB / 386 MB',
-                  control: Icons.pause,
-                  progress: 0.68,
-                  footLeft: '68%',
-                  footSpeed: ' · 2.4 MB/s',
-                  footRight: '剩余 1 分钟',
-                  toast: '已暂停',
-                ),
-                _TransferCard(
-                  icon: Icons.audio_file,
-                  iconColor: QyColors.violetDeep,
-                  background: QyColors.violetSoft,
-                  name: '周会录音 11-18.m4a',
-                  meta: '上传中 · 9.2 MB / 28.6 MB',
-                  control: Icons.pause,
-                  progress: 0.32,
-                  footLeft: '32%',
-                  footSpeed: ' · 1.4 MB/s',
-                  footRight: '剩余 1 分钟',
-                  toast: '已暂停',
-                ),
-                _TransferCard(
-                  icon: Icons.image,
-                  iconColor: QyColors.primary,
-                  background: QyColors.primaryLight,
-                  name: '设计稿-首页.psd',
-                  meta: '排队中 · 0 / 128 MB',
-                  control: Icons.close,
-                  progress: 0.02,
-                  footLeft: '等待中',
-                  footSpeed: '',
-                  footRight: '—',
-                  toast: '已取消',
-                ),
-                ProtoSectionHead(
-                  title: '今天已完成',
-                  more: '3 项',
-                  moreIcon: Icons.chevron_right,
-                  padding: EdgeInsets.fromLTRB(18, 16, 18, 10),
-                ),
-                _DoneList(),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 }
 
 class _SpeedCard extends StatelessWidget {
-  const _SpeedCard();
+  const _SpeedCard({required this.active});
+
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -130,15 +129,15 @@ class _SpeedCard extends StatelessWidget {
             child: const Icon(Icons.bolt, size: 21, color: QyColors.primary),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('当前速度 3.8 MB/s',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: QyColors.ink)),
-                SizedBox(height: 2),
-                Text('会员加速中 · 预计 2 分钟完成',
-                    style: TextStyle(fontSize: 10.5, color: Color(0xFF6B7A93))),
+                Text(active ? '传输进行中' : '空闲中',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: QyColors.ink)),
+                const SizedBox(height: 2),
+                Text(active ? '上传 / 下载进度实时更新' : '上传或下载文件后显示实时进度',
+                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF6B7A93))),
               ],
             ),
           ),
@@ -150,34 +149,36 @@ class _SpeedCard extends StatelessWidget {
 }
 
 class _TransferCard extends StatelessWidget {
-  const _TransferCard({
-    required this.icon,
-    required this.iconColor,
-    required this.background,
-    required this.name,
-    required this.meta,
-    required this.control,
-    required this.progress,
-    required this.footLeft,
-    required this.footSpeed,
-    required this.footRight,
-    required this.toast,
-  });
+  const _TransferCard({required this.task});
 
-  final IconData icon;
-  final Color iconColor;
-  final Color background;
-  final String name;
-  final String meta;
-  final IconData control;
-  final double progress;
-  final String footLeft;
-  final String footSpeed;
-  final String footRight;
-  final String toast;
+  final TransferTask task;
+
+  static const Map<FileCategory, IconData> _icons = <FileCategory, IconData>{
+    FileCategory.image: Icons.image,
+    FileCategory.doc: Icons.table_chart,
+    FileCategory.video: Icons.movie,
+    FileCategory.music: Icons.audio_file,
+    FileCategory.zip: Icons.folder_zip,
+    FileCategory.other: Icons.insert_drive_file,
+    FileCategory.all: Icons.insert_drive_file,
+  };
 
   @override
   Widget build(BuildContext context) {
+    final store = LocalTransferStore.instance;
+    final category = FileCategoryX.fromFileName(task.name);
+    final statusMeta = switch (task.status) {
+      TransferStatus.running => '${task.direction == TransferDirection.upload ? '上传中' : '下载中'} · ${(task.progress * 100).toStringAsFixed(0)}%',
+      TransferStatus.paused => '已暂停 · ${(task.progress * 100).toStringAsFixed(0)}%',
+      TransferStatus.done => '传输完成',
+      TransferStatus.failed => '传输失败',
+    };
+    final control = switch (task.status) {
+      TransferStatus.running => Icons.pause,
+      TransferStatus.paused => Icons.play_arrow,
+      TransferStatus.failed => Icons.refresh,
+      TransferStatus.done => Icons.close,
+    };
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       padding: const EdgeInsets.all(14),
@@ -190,20 +191,39 @@ class _TransferCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              ProtoTypeIcon(icon: icon, color: iconColor, background: background),
+              ProtoTypeIcon(
+                icon: _icons[category] ?? Icons.insert_drive_file,
+                color: QyColors.primary,
+                background: QyColors.primaryLight,
+              ),
               const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: ProtoText.name135),
+                    Text(task.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: ProtoText.name135),
                     const SizedBox(height: 3),
-                    Text(meta, style: ProtoText.label105),
+                    Text('${task.sizeLabel.isEmpty ? '' : '${task.sizeLabel} · '}$statusMeta', style: ProtoText.label105),
                   ],
                 ),
               ),
               QyTapScale(
-                onTap: () => showQyToast(context, toast),
+                onTap: () {
+                  switch (task.status) {
+                    case TransferStatus.running:
+                      store.pause(task.id);
+                      showQyToast(context, '已暂停');
+                    case TransferStatus.paused:
+                      store.resume(task.id);
+                      showQyToast(context, '已继续');
+                    case TransferStatus.failed:
+                      store.resume(task.id);
+                      showQyToast(context, '已重新排队');
+                    case TransferStatus.done:
+                      store.remove(task.id);
+                      showQyToast(context, '已移除记录');
+                  }
+                },
                 child: Container(
                   width: 30,
                   height: 30,
@@ -225,7 +245,7 @@ class _TransferCard extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: FractionallySizedBox(
-                  widthFactor: progress,
+                  widthFactor: task.progress.clamp(0.0, 1.0),
                   child: const DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.all(Radius.circular(3)),
@@ -246,15 +266,23 @@ class _TransferCard extends StatelessWidget {
                   style: const TextStyle(fontSize: 10, color: QyColors.muted),
                   children: <TextSpan>[
                     TextSpan(
-                      text: footLeft,
+                      text: task.status == TransferStatus.failed
+                          ? '失败'
+                          : '${(task.progress * 100).toStringAsFixed(0)}%',
                       style: const TextStyle(fontWeight: FontWeight.w600, color: QyColors.primary),
                     ),
-                    TextSpan(text: footSpeed),
                   ],
                 ),
               ),
               const Spacer(),
-              Text(footRight, style: const TextStyle(fontSize: 10, color: QyColors.muted)),
+              Text(
+                task.status == TransferStatus.done
+                    ? '已完成'
+                    : task.status == TransferStatus.failed
+                        ? '可重试'
+                        : '进行中',
+                style: const TextStyle(fontSize: 10, color: QyColors.muted),
+              ),
             ],
           ),
         ],
@@ -264,7 +292,9 @@ class _TransferCard extends StatelessWidget {
 }
 
 class _DoneList extends StatelessWidget {
-  const _DoneList();
+  const _DoneList({required this.tasks});
+
+  final List<TransferTask> tasks;
 
   @override
   Widget build(BuildContext context) {
@@ -275,29 +305,13 @@ class _DoneList extends StatelessWidget {
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       clipBehavior: Clip.antiAlias,
-      child: const Column(
+      child: Column(
         children: <Widget>[
-          _DoneRow(
-            icon: Icons.check_circle,
-            iconColor: QyColors.mintDeep,
-            background: QyColors.mintSoft,
-            name: '海边日落.jpg',
-            sub: '4.2 MB · 上传完成 14:22',
-          ),
-          _DoneRow(
-            icon: Icons.check_circle,
-            iconColor: QyColors.primary,
-            background: QyColors.primaryLight,
-            name: 'Q4 项目方案.pptx',
-            sub: '12.4 MB · 上传完成 11:05',
-          ),
-          _DoneRow(
-            icon: Icons.check_circle,
-            iconColor: QyColors.amberDeep,
-            background: QyColors.amberSoft,
-            name: '学习资料合集.zip',
-            sub: '624 MB · 下载完成 09:12',
-          ),
+          for (final task in tasks)
+            _DoneRow(
+              name: task.name,
+              sub: '${task.sizeLabel.isEmpty ? '已完成' : task.sizeLabel} · ${task.direction == TransferDirection.upload ? '上传' : '下载'}完成',
+            ),
         ],
       ),
     );
@@ -305,17 +319,8 @@ class _DoneList extends StatelessWidget {
 }
 
 class _DoneRow extends StatelessWidget {
-  const _DoneRow({
-    required this.icon,
-    required this.iconColor,
-    required this.background,
-    required this.name,
-    required this.sub,
-  });
+  const _DoneRow({required this.name, required this.sub});
 
-  final IconData icon;
-  final Color iconColor;
-  final Color background;
   final String name;
   final String sub;
 
@@ -328,7 +333,11 @@ class _DoneRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       child: Row(
         children: <Widget>[
-          ProtoTypeIcon(icon: icon, color: iconColor, background: background),
+          const ProtoTypeIcon(
+            icon: Icons.check_circle,
+            color: QyColors.mintDeep,
+            background: QyColors.mintSoft,
+          ),
           const SizedBox(width: 11),
           Expanded(
             child: Column(

@@ -2,11 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/models/cloud_models.dart';
+import '../../core/models/transfer_store.dart';
+import '../../core/network/cloud_repository.dart';
+import '../../core/router/app_router.dart';
 import '../../widgets/proto_widgets.dart';
 
 /// 04 我的（对齐 screen-mine）。
-class ProfileScreen extends StatelessWidget {
+///
+/// 存储 / 分享 / 回收站等数据接入 lanflare；传输任务取本地任务模型。
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final CloudRepository _repo = CloudRepository();
+
+  late final Future<StorageSummary> _summaryFuture = _repo.storageSummary();
+  late final Future<int> _fileCountFuture =
+      _repo.files().then((files) => files.length);
+  late final Future<int> _shareCountFuture = _repo.shareCount();
+  late final Future<int> _trashCountFuture = _repo.trashCount();
+
+  Future<void> _logout() async {
+    await _repo.logout();
+    if (!mounted) return;
+    context.go(AppRouter.login);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +58,17 @@ class ProfileScreen extends StatelessWidget {
                       iconColor: QyColors.primary,
                       background: QyColors.primaryLight,
                       label: '存储空间',
-                      value: '174.2 / 256 GB',
+                      value: FutureBuilder<StorageSummary>(
+                        future: _summaryFuture,
+                        builder: (_, snapshot) {
+                          final summary = snapshot.data;
+                          if (summary == null) return const Text('—', style: _cellValueStyle);
+                          return Text(
+                            '${summary.usedGb.toStringAsFixed(1)} / ${summary.totalGb.toStringAsFixed(0)} GB',
+                            style: _cellValueStyle,
+                          );
+                        },
+                      ),
                       onTap: () => context.go(QyRoutes.storage),
                     ),
                   ],
@@ -46,31 +81,38 @@ class ProfileScreen extends StatelessWidget {
                       iconColor: QyColors.primary,
                       background: QyColors.primaryLight,
                       label: '我的分享',
-                      onTap: () => showQyToast(context, '我的分享：6 个链接'),
+                      value: _countText(_shareCountFuture, suffix: ' 个链接'),
+                      onTap: () => context.go(QyRoutes.files),
                     ),
                     _MeCell(
                       icon: Icons.delete_outline,
                       iconColor: QyColors.pinkDeep,
                       background: QyColors.pinkSoft,
                       label: '回收站',
-                      value: '12',
-                      onTap: () => showQyToast(context, '回收站：12 个文件'),
+                      value: _countText(_trashCountFuture, suffix: ''),
+                      onTap: () => context.go(QyRoutes.files),
                     ),
                     _MeCell(
                       icon: Icons.cloud_download,
                       iconColor: QyColors.mintDeep,
                       background: QyColors.mintSoft,
-                      label: '离线下载',
-                      value: '2 个任务',
-                      onTap: () => showQyToast(context, '离线下载：2 个任务'),
+                      label: '传输任务',
+                      value: AnimatedBuilder(
+                        animation: LocalTransferStore.instance,
+                        builder: (_, __) {
+                          final count = LocalTransferStore.instance.tasks.length;
+                          return Text('$count 个任务', style: _cellValueStyle);
+                        },
+                      ),
+                      onTap: () => context.go(QyRoutes.transfers),
                     ),
                     _MeCell(
                       icon: Icons.devices,
                       iconColor: QyColors.amberDeep,
                       background: QyColors.amberSoft,
                       label: '设备管理',
-                      value: '3 台',
-                      onTap: () => showQyToast(context, '设备管理：3 台设备在线'),
+                      value: const Text('1 台', style: _cellValueStyle),
+                      onTap: () => showQyToast(context, '设备管理：当前设备在线'),
                     ),
                   ],
                 ),
@@ -98,6 +140,13 @@ class ProfileScreen extends StatelessWidget {
                       label: '设置',
                       onTap: () => showQyToast(context, '设置'),
                     ),
+                    _MeCell(
+                      icon: Icons.logout,
+                      iconColor: QyColors.coral,
+                      background: QyColors.canvas,
+                      label: '退出登录',
+                      onTap: _logout,
+                    ),
                   ],
                 ),
                 const ProtoFootNote(
@@ -111,6 +160,22 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
+
+  /// 数值单元：加载中显示占位，失败显示 —。
+  Widget _countText(Future<int> future, {required String suffix}) {
+    return FutureBuilder<int>(
+      future: future,
+      builder: (_, snapshot) {
+        if (!snapshot.hasData) {
+          return const Text('—', style: _cellValueStyle);
+        }
+        return Text('${snapshot.data}$suffix', style: _cellValueStyle);
+      },
+    );
+  }
+
+  static const TextStyle _cellValueStyle =
+      TextStyle(fontSize: 11.5, color: QyColors.muted);
 }
 
 class _MeHero extends StatelessWidget {
@@ -355,7 +420,9 @@ class _MeCell extends StatelessWidget {
   final Color iconColor;
   final Color background;
   final String label;
-  final String? value;
+
+  /// 右侧数值区：支持任意 Widget（实时数据用 FutureBuilder/AnimatedBuilder）。
+  final Widget? value;
   final VoidCallback onTap;
 
   @override
@@ -385,7 +452,7 @@ class _MeCell extends StatelessWidget {
             if (value != null)
               Padding(
                 padding: const EdgeInsets.only(right: 2),
-                child: Text(value!, style: const TextStyle(fontSize: 11.5, color: QyColors.muted)),
+                child: value,
               ),
             const Icon(Icons.chevron_right, size: 18, color: QyColors.chevron),
           ],

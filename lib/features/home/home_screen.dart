@@ -4,11 +4,45 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/models/cloud_models.dart';
+import '../../core/network/cloud_repository.dart';
 import '../../widgets/proto_widgets.dart';
 
-/// 01 首页 · 存储概览（对齐 screen-home）。
-class HomeScreen extends StatelessWidget {
+/// 01 首页 · 存储概览（对齐 screen-home）。容量与最近文件来自 lanflare。
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final CloudRepository _repo = CloudRepository();
+  StorageSummary? _summary;
+  List<CloudFile> _recent = <CloudFile>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final summary = await _repo.storageSummary();
+      if (!mounted) return;
+      setState(() => _summary = summary);
+    } catch (_) {
+      // 容量加载失败时保持占位展示，不打断首页。
+    }
+    try {
+      final files = await _repo.files();
+      if (!mounted) return;
+      setState(() => _recent = files.take(6).toList());
+    } catch (_) {
+      // 最近文件加载失败时保持空列表。
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,24 +66,27 @@ class HomeScreen extends StatelessWidget {
             children: <Widget>[
               const _HeroContent(),
               Expanded(
-                child: ListView(
-                  physics: qyProtoScrollPhysics,
-                  padding: const EdgeInsets.only(bottom: 96),
-                  children: <Widget>[
-                    _StorageCard(onTap: () => context.go(QyRoutes.storage)),
-                    const _QuickGrid(),
-                    ProtoSectionHead(
-                      title: '最近文件',
-                      more: '全部',
-                      onMore: () => context.go(QyRoutes.files),
-                    ),
-                    _RecentRow(onTap: () => context.go(QyRoutes.preview)),
-                    const ProtoSectionHead(
-                      title: '为你推荐',
-                      padding: EdgeInsets.fromLTRB(18, 20, 18, 2),
-                    ),
-                    _MemoryCard(onTap: () => context.go(QyRoutes.album)),
-                  ],
+                child: RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    physics: qyProtoScrollPhysics,
+                    padding: const EdgeInsets.only(bottom: 96),
+                    children: <Widget>[
+                      _StorageCard(summary: _summary, onTap: () => context.go(QyRoutes.storage)),
+                      const _QuickGrid(),
+                      ProtoSectionHead(
+                        title: '最近文件',
+                        more: '全部',
+                        onMore: () => context.go(QyRoutes.files),
+                      ),
+                      _RecentRow(files: _recent, onTap: () => context.go(QyRoutes.preview)),
+                      const ProtoSectionHead(
+                        title: '为你推荐',
+                        padding: EdgeInsets.fromLTRB(18, 20, 18, 2),
+                      ),
+                      _MemoryCard(onTap: () => context.go(QyRoutes.album)),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -180,14 +217,20 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-/// 容量卡：环形进度 68% + 分段进度条 + 升级按钮。
+/// 容量卡：环形进度 + 分段进度条 + 升级按钮。数据来自 lanflare 容量概览。
 class _StorageCard extends StatelessWidget {
-  const _StorageCard({required this.onTap});
+  const _StorageCard({required this.onTap, this.summary});
 
   final VoidCallback onTap;
+  final StorageSummary? summary;
 
   @override
   Widget build(BuildContext context) {
+    final summary = this.summary;
+    final usedLabel =
+        summary == null ? '— GB' : '${summary.usedGb.toStringAsFixed(1)} GB';
+    final totalLabel =
+        summary == null ? '— GB' : '${summary.totalGb.toStringAsFixed(0)} GB';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: QyTapScale(
@@ -203,29 +246,29 @@ class _StorageCard extends StatelessWidget {
           ),
           child: Row(
             children: <Widget>[
-              const _Ring(),
+              _Ring(ratio: summary?.ratio ?? 0),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text('存储空间', style: ProtoText.label11),
-                    SizedBox(height: 3),
+                    const Text('存储空间', style: ProtoText.label11),
+                    const SizedBox(height: 3),
                     Text.rich(
                       TextSpan(
                         style: ProtoText.value14,
                         children: <TextSpan>[
-                          TextSpan(text: '174.2 GB '),
+                          TextSpan(text: '$usedLabel '),
                           TextSpan(
-                            text: '/ 256 GB',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: QyColors.muted),
+                            text: '/ $totalLabel',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: QyColors.muted),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: 8),
-                    _StorageBar(),
+                    const SizedBox(height: 8),
+                    const _StorageBar(),
                   ],
                 ),
               ),
@@ -243,10 +286,13 @@ class _StorageCard extends StatelessWidget {
 }
 
 class _Ring extends StatelessWidget {
-  const _Ring();
+  const _Ring({required this.ratio});
+
+  final double ratio;
 
   @override
   Widget build(BuildContext context) {
+    final clamped = ratio.clamp(0.0, 1.0);
     return SizedBox(
       width: 54,
       height: 54,
@@ -258,11 +304,11 @@ class _Ring extends StatelessWidget {
             child: Container(
               width: 54,
               height: 54,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: SweepGradient(
-                  stops: <double>[0, 0.68, 0.68, 1],
-                  colors: <Color>[
+                  stops: <double>[0, clamped, clamped, 1],
+                  colors: const <Color>[
                     QyColors.primary,
                     QyColors.primary,
                     Color(0xFFE9EFF9),
@@ -277,9 +323,9 @@ class _Ring extends StatelessWidget {
             height: 42,
             decoration: const BoxDecoration(color: QyColors.surface, shape: BoxShape.circle),
           ),
-          const Text(
-            '68%',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: QyColors.primary),
+          Text(
+            '${(clamped * 100).round()}%',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: QyColors.primary),
           ),
         ],
       ),
@@ -433,11 +479,31 @@ class _QuickItem extends StatelessWidget {
   }
 }
 
-/// 最近文件横滑卡片。
+/// 最近文件横滑卡片。数据来自 lanflare 文件列表（前 6 个）。
 class _RecentRow extends StatelessWidget {
-  const _RecentRow({required this.onTap});
+  const _RecentRow({required this.files, required this.onTap});
 
+  final List<CloudFile> files;
   final VoidCallback onTap;
+
+  static const List<List<Color>> _palette = <List<Color>>[
+    <Color>[Color(0xFF4C8DFF), Color(0xFF7FB6FF)],
+    <Color>[QyColors.mint, Color(0xFF63E0CB)],
+    <Color>[QyColors.amber, Color(0xFFFFD27A)],
+    <Color>[Color(0xFFA78BFF), Color(0xFFC9B8FF)],
+    <Color>[QyColors.pink, Color(0xFFFFA8C2)],
+    <Color>[Color(0xFF5EA2EF), Color(0xFF8FD0F2)],
+  ];
+
+  static const Map<FileCategory, IconData> _icons = <FileCategory, IconData>{
+    FileCategory.image: Icons.image,
+    FileCategory.doc: Icons.description,
+    FileCategory.video: Icons.movie,
+    FileCategory.music: Icons.library_music,
+    FileCategory.zip: Icons.folder_zip,
+    FileCategory.other: Icons.insert_drive_file,
+    FileCategory.all: Icons.insert_drive_file,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -449,34 +515,27 @@ class _RecentRow extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: <Widget>[
-            _FileCard(
-              colors: const <Color>[Color(0xFF4C8DFF), Color(0xFF7FB6FF)],
-              icon: Icons.image,
-              name: '海边日落.jpg',
-              meta: '今天 14:22 · 4.2 MB',
-              onTap: onTap,
-            ),
-            _FileCard(
-              colors: const <Color>[QyColors.mint, Color(0xFF63E0CB)],
-              icon: Icons.description,
-              name: '项目方案.pptx',
-              meta: '今天 11:05 · 12.4 MB',
-              onTap: onTap,
-            ),
-            _FileCard(
-              colors: const <Color>[QyColors.amber, Color(0xFFFFD27A)],
-              icon: Icons.movie,
-              name: '4K 风景.mp4',
-              meta: '昨天 · 386 MB',
-              onTap: onTap,
-            ),
-            _FileCard(
-              colors: const <Color>[Color(0xFFA78BFF), Color(0xFFC9B8FF)],
-              icon: Icons.picture_as_pdf,
-              name: '年度报告.pdf',
-              meta: '昨天 · 8.6 MB',
-              onTap: onTap,
-            ),
+            if (files.isEmpty)
+              _FileCard(
+                colors: const <Color>[Color(0xFFE9EFF9), Color(0xFFF5F8FE)],
+                icon: Icons.folder_open,
+                iconColor: QyColors.muted,
+                name: '暂无最近文件',
+                meta: '上传后在这里展示',
+                onTap: onTap,
+              )
+            else
+              for (var i = 0; i < files.length; i++)
+                _FileCard(
+                  colors: _palette[i % _palette.length],
+                  icon: _icons[files[i].category] ?? Icons.insert_drive_file,
+                  name: files[i].name,
+                  meta: <String>[
+                    if (files[i].updatedLabel.isNotEmpty) files[i].updatedLabel,
+                    if (files[i].sizeLabel.isNotEmpty) files[i].sizeLabel,
+                  ].join(' · '),
+                  onTap: onTap,
+                ),
           ],
         ),
       ),
@@ -491,10 +550,12 @@ class _FileCard extends StatelessWidget {
     required this.name,
     required this.meta,
     required this.onTap,
+    this.iconColor,
   });
 
   final List<Color> colors;
   final IconData icon;
+  final Color? iconColor;
   final String name;
   final String meta;
   final VoidCallback onTap;
@@ -527,7 +588,7 @@ class _FileCard extends StatelessWidget {
                   ),
                 ),
                 child: Center(
-                  child: Icon(icon, size: 30, color: const Color(0xEBFFFFFF)),
+                  child: Icon(icon, size: 30, color: iconColor ?? const Color(0xEBFFFFFF)),
                 ),
               ),
               const SizedBox(height: 9),

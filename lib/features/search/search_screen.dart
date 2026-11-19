@@ -2,11 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/models/cloud_models.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/network/cloud_repository.dart';
 import '../../widgets/proto_widgets.dart';
 
-/// 05 搜索（对齐 screen-search）。
-class SearchScreen extends StatelessWidget {
+/// 05 搜索（对齐 screen-search）。关键字实时走 lanflare `/api/search`。
+class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
+
+  @override
+  State<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends State<SearchScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final CloudRepository _repo = CloudRepository();
 
   static const List<String> _history = <String>[
     '项目方案',
@@ -16,6 +27,48 @@ class SearchScreen extends StatelessWidget {
     '设计稿',
   ];
 
+  bool _searching = false;
+  String _query = '';
+  List<CloudFile> _results = <CloudFile>[];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return;
+    _controller.text = q;
+    setState(() {
+      _searching = true;
+      _query = q;
+    });
+    try {
+      final files = await _repo.files(keyword: q);
+      if (!mounted) return;
+      setState(() {
+        _results = files;
+        _searching = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _results = const <CloudFile>[];
+        _searching = false;
+      });
+      showQyToast(context, error.message, success: false);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _results = const <CloudFile>[];
+        _searching = false;
+      });
+      showQyToast(context, '搜索失败，请检查网络后重试', success: false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
@@ -24,99 +77,115 @@ class SearchScreen extends StatelessWidget {
         physics: qyProtoScrollPhysics,
         padding: const EdgeInsets.only(bottom: 26),
         children: <Widget>[
-          const _SearchBar(),
+          _SearchBar(controller: _controller, onSubmitted: _search),
           const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
-            child: Row(
-              children: <Widget>[
-                const Text('搜索历史',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel)),
-                const Spacer(),
-                QyTapScale(
-                  onTap: () => showQyToast(context, '已清空搜索历史'),
-                  child: const Icon(Icons.delete_outline, size: 17, color: QyColors.hint),
-                ),
-              ],
+          if (_searching)
+            const Padding(
+              padding: EdgeInsets.all(48),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_query.isNotEmpty) ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
+              child: Text(
+                _results.isEmpty ? '没有找到与「$_query」匹配的文件' : '「$_query」 · ${_results.length} 个结果',
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                for (final String tag in _history)
-                  _Tag(label: tag, onTap: () => showQyToast(context, '搜索：$tag')),
-              ],
+            if (_results.isNotEmpty) _ResultList(files: _results),
+          ] else ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
+              child: Row(
+                children: <Widget>[
+                  const Text('搜索历史',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel)),
+                  const Spacer(),
+                  QyTapScale(
+                    onTap: () => showQyToast(context, '已清空搜索历史'),
+                    child: const Icon(Icons.delete_outline, size: 17, color: QyColors.hint),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(18, 22, 18, 12),
-            child: Text('热门搜索',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel)),
-          ),
-          _HotRow(
-            rank: '1',
-            top: true,
-            text: '2026 年度总结',
-            badge: '热',
-            badgeNew: false,
-            onTap: () => showQyToast(context, '搜索：2026 年度总结'),
-          ),
-          _HotRow(
-            rank: '2',
-            top: true,
-            text: '旅行照片',
-            badge: '新',
-            badgeNew: true,
-            onTap: () => showQyToast(context, '搜索：旅行照片'),
-          ),
-          _HotRow(
-            rank: '3',
-            top: true,
-            text: '项目排期表',
-            onTap: () => showQyToast(context, '搜索：项目排期表'),
-          ),
-          _HotRow(
-            rank: '4',
-            top: false,
-            text: '发票扫描件',
-            onTap: () => showQyToast(context, '搜索：发票'),
-          ),
-          _HotRow(
-            rank: '5',
-            top: false,
-            text: '证件备份',
-            onTap: () => showQyToast(context, '搜索：证件'),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(18, 20, 18, 0),
-            child: Text('快捷筛选',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel)),
-          ),
-          const SizedBox(height: 12),
-          _ResultHint(
-            icon: Icons.image,
-            prefix: '图片 · ',
-            bold: '1,284',
-            suffix: ' 个文件，按拍摄地点聚合',
-            onTap: () => context.go(QyRoutes.album),
-          ),
-          _ResultHint(
-            icon: Icons.description,
-            prefix: '文档 · ',
-            bold: '96',
-            suffix: ' 个文件，最近更新于今天',
-            onTap: () => context.go(QyRoutes.files),
-          ),
-          _ResultHint(
-            icon: Icons.swap_vert,
-            prefix: '传输记录 · ',
-            bold: '3',
-            suffix: ' 个任务进行中',
-            onTap: () => context.go(QyRoutes.transfers),
-          ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  for (final String tag in _history)
+                    _Tag(label: tag, onTap: () => _search(tag)),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(18, 22, 18, 12),
+              child: Text('热门搜索',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel)),
+            ),
+            _HotRow(
+              rank: '1',
+              top: true,
+              text: '2026 年度总结',
+              badge: '热',
+              badgeNew: false,
+              onTap: () => _search('2026 年度总结'),
+            ),
+            _HotRow(
+              rank: '2',
+              top: true,
+              text: '旅行照片',
+              badge: '新',
+              badgeNew: true,
+              onTap: () => _search('旅行照片'),
+            ),
+            _HotRow(
+              rank: '3',
+              top: true,
+              text: '项目排期表',
+              onTap: () => _search('项目排期表'),
+            ),
+            _HotRow(
+              rank: '4',
+              top: false,
+              text: '发票扫描件',
+              onTap: () => _search('发票'),
+            ),
+            _HotRow(
+              rank: '5',
+              top: false,
+              text: '证件备份',
+              onTap: () => _search('证件'),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(18, 20, 18, 0),
+              child: Text('快捷筛选',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel)),
+            ),
+            const SizedBox(height: 12),
+            _ResultHint(
+              icon: Icons.image,
+              prefix: '图片 · ',
+              bold: '1,284',
+              suffix: ' 个文件，按拍摄地点聚合',
+              onTap: () => context.go(QyRoutes.album),
+            ),
+            _ResultHint(
+              icon: Icons.description,
+              prefix: '文档 · ',
+              bold: '96',
+              suffix: ' 个文件，最近更新于今天',
+              onTap: () => context.go(QyRoutes.files),
+            ),
+            _ResultHint(
+              icon: Icons.swap_vert,
+              prefix: '传输记录 · ',
+              bold: '3',
+              suffix: ' 个任务进行中',
+              onTap: () => context.go(QyRoutes.transfers),
+            ),
+          ],
         ],
       ),
     );
@@ -124,7 +193,10 @@ class SearchScreen extends StatelessWidget {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+  const _SearchBar({required this.controller, required this.onSubmitted});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -148,19 +220,22 @@ class _SearchBar extends StatelessWidget {
                   BoxShadow(color: Color(0x0A1F4899), blurRadius: 8, offset: Offset(0, 2)),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 children: <Widget>[
-                  Icon(Icons.search, size: 19, color: QyColors.primary),
-                  SizedBox(width: 8),
+                  const Icon(Icons.search, size: 19, color: QyColors.primary),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
-                      decoration: InputDecoration(
+                      controller: controller,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: onSubmitted,
+                      decoration: const InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
                         hintText: '搜索文件名 / 内容',
                         hintStyle: TextStyle(fontSize: 14, color: Color(0xFFA9B4C6)),
                       ),
-                      style: TextStyle(fontSize: 14, color: QyColors.ink),
+                      style: const TextStyle(fontSize: 14, color: QyColors.ink),
                     ),
                   ),
                 ],
@@ -173,6 +248,65 @@ class _SearchBar extends StatelessWidget {
             child: const Text('取消', style: TextStyle(fontSize: 13, color: QyColors.sub)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 搜索结果列表（lanflare 返回的是全局匹配，含所在路径）。
+class _ResultList extends StatelessWidget {
+  const _ResultList({required this.files});
+
+  final List<CloudFile> files;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: QyColors.surface,
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: <Widget>[
+            for (final file in files)
+              QyTapScale(
+                onTap: () => context.go(QyRoutes.preview),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: QyColors.divider)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: <Widget>[
+                      ProtoTypeIcon(
+                        icon: Icons.insert_drive_file,
+                        color: QyColors.primary,
+                        background: QyColors.primaryLight,
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(file.name,
+                                maxLines: 1, overflow: TextOverflow.ellipsis, style: ProtoText.name135),
+                            if (file.sizeLabel.isNotEmpty) ...<Widget>[
+                              const SizedBox(height: 3),
+                              Text(file.sizeLabel, style: ProtoText.label105),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, size: 17, color: QyColors.chevron),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

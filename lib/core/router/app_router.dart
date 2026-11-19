@@ -5,11 +5,15 @@ import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 import '../../features/album/album_screen.dart';
 import '../../features/files/files_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/login/login_screen.dart';
 import '../../features/preview/preview_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/storage/storage_screen.dart';
 import '../../features/transfers/transfers_screen.dart';
+import '../config/app_config.dart';
+import '../network/api_client.dart';
+import '../network/token_store.dart';
 
 /// App 路由表：对齐高保真原型的 8 个页面。
 ///
@@ -44,9 +48,31 @@ abstract final class AppRouter {
     demoBoundary: QyRoutes.files,
   };
 
+  /// 登录页（对接 lanflare 时未登录一律先到这里）。
+  static const String login = '/login';
+
+  /// 登录态守卫：未登录跳登录页；已登录访问登录页回首页。
+  /// mock 模式（useMockData = true）不强制登录。
+  static String? _authGuard(BuildContext _, GoRouterState state) {
+    if (AppConfig.useMockData) return null;
+    final loggedIn = TokenStore.credential?.isNotEmpty ?? false;
+    final atLogin = state.matchedLocation == login;
+    if (!loggedIn && !atLogin) return login;
+    if (loggedIn && atLogin) return QyRoutes.home;
+    return null;
+  }
+
+  /// HTTP 401 全局处理：清凭证并回到登录页（main 里注册到 ApiClient）。
+  static void handleUnauthorized() {
+    TokenStore.clear();
+    router.go(login);
+  }
+
   static final GoRouter router = GoRouter(
     initialLocation: QyRoutes.home,
+    redirect: _authGuard,
     routes: <RouteBase>[
+      GoRoute(path: login, builder: (_, __) => const LoginScreen()),
       StatefulShellRoute.indexedStack(
         builder: (_, __, navigationShell) => QyTabShell(navigationShell: navigationShell),
         branches: <StatefulShellBranch>[

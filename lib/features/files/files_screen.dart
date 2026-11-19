@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/models/cloud_models.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/network/cloud_repository.dart';
 import '../../widgets/proto_widgets.dart';
 
-/// 02 全部文件（对齐 screen-files）。
+/// 02 全部文件（对齐 screen-files）。数据来自 lanflare（/api/list、/api/search）。
 class FilesScreen extends StatefulWidget {
   const FilesScreen({super.key});
 
@@ -13,9 +16,54 @@ class FilesScreen extends StatefulWidget {
 }
 
 class _FilesScreenState extends State<FilesScreen> {
+  final CloudRepository _repo = CloudRepository();
+
   int _chip = 0;
+  bool _loading = true;
+  String? _error;
+  List<CloudFile> _files = <CloudFile>[];
 
   static const List<String> _chips = <String>['全部', '文档', '图片', '视频', '音频'];
+  static const List<FileCategory> _categories = <FileCategory>[
+    FileCategory.all,
+    FileCategory.doc,
+    FileCategory.image,
+    FileCategory.video,
+    FileCategory.music,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final files = await _repo.files(category: _categories[_chip]);
+      if (!mounted) return;
+      setState(() {
+        _files = files;
+        _loading = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.message;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = '加载失败，请检查网络后重试';
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,25 +96,47 @@ class _FilesScreenState extends State<FilesScreen> {
               ProtoChipRow(
                 labels: _chips,
                 activeIndex: _chip,
-                onChanged: (int i) => setState(() => _chip = i),
+                onChanged: (int i) {
+                  setState(() => _chip = i);
+                  _load();
+                },
               ),
               const _FolderGrid(),
               Expanded(
                 child: ListView(
                   physics: qyProtoScrollPhysics,
                   padding: const EdgeInsets.only(bottom: 100),
-                  children: const <Widget>[
-                    ProtoSectionHead(
+                  children: <Widget>[
+                    const ProtoSectionHead(
                       title: '文件',
                       more: '按修改时间',
                       moreIcon: Icons.expand_more,
                       padding: EdgeInsets.fromLTRB(18, 18, 18, 10),
                     ),
-                    _FileList(),
-                    ProtoFootNote(
-                      '已显示全部 5 个文件',
-                      padding: EdgeInsets.only(top: 4, bottom: 4),
-                    ),
+                    if (_loading)
+                      const Padding(
+                        padding: EdgeInsets.all(48),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_error != null)
+                      QyEmptyState(
+                        title: '加载失败',
+                        description: _error!,
+                        actionLabel: '重新加载',
+                        onAction: _load,
+                      )
+                    else if (_files.isEmpty)
+                      const QyEmptyState(
+                        title: '这里空空如也',
+                        description: '当前分类下没有文件，试试上传或切换分类',
+                      )
+                    else ...<Widget>[
+                      _FileList(files: _files),
+                      ProtoFootNote(
+                        '已显示全部 ${_files.length} 个文件',
+                        padding: const EdgeInsets.only(top: 4, bottom: 4),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -187,7 +257,9 @@ class _FolderCard extends StatelessWidget {
 }
 
 class _FileList extends StatelessWidget {
-  const _FileList();
+  const _FileList({required this.files});
+
+  final List<CloudFile> files;
 
   @override
   Widget build(BuildContext context) {
@@ -200,46 +272,11 @@ class _FileList extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: <Widget>[
-          _FileRow(
-            icon: Icons.slideshow,
-            iconColor: QyColors.primary,
-            background: QyColors.primaryLight,
-            name: 'Q4 项目方案.pptx',
-            sub: '12.4 MB · 今天 11:05',
-            onTap: () => context.go(QyRoutes.preview),
-          ),
-          _FileRow(
-            icon: Icons.table_chart,
-            iconColor: QyColors.mintDeep,
-            background: QyColors.mintSoft,
-            name: '家庭账单 11 月.xlsx',
-            sub: '1.8 MB · 今天 09:32',
-            onTap: () => context.go(QyRoutes.preview),
-          ),
-          _FileRow(
-            icon: Icons.movie,
-            iconColor: QyColors.amberDeep,
-            background: QyColors.amberSoft,
-            name: '4K 风景素材.mp4',
-            sub: '386 MB · 昨天 20:14',
-            onTap: () => context.go(QyRoutes.preview),
-          ),
-          _FileRow(
-            icon: Icons.audio_file,
-            iconColor: QyColors.violetDeep,
-            background: QyColors.violetSoft,
-            name: '周会录音 11-17.m4a',
-            sub: '28.6 MB · 昨天 16:40',
-            onTap: () => context.go(QyRoutes.preview),
-          ),
-          _FileRow(
-            icon: Icons.picture_as_pdf,
-            iconColor: QyColors.pinkDeep,
-            background: QyColors.pinkSoft,
-            name: '年度总结报告.pdf',
-            sub: '8.6 MB · 11 月 15 日',
-            onTap: () => context.go(QyRoutes.preview),
-          ),
+          for (final file in files)
+            _FileRow(
+              file: file,
+              onTap: () => context.go(QyRoutes.preview),
+            ),
         ],
       ),
     );
@@ -247,24 +284,47 @@ class _FileList extends StatelessWidget {
 }
 
 class _FileRow extends StatelessWidget {
-  const _FileRow({
-    required this.icon,
-    required this.iconColor,
-    required this.background,
-    required this.name,
-    required this.sub,
-    required this.onTap,
-  });
+  const _FileRow({required this.file, required this.onTap});
 
-  final IconData icon;
-  final Color iconColor;
-  final Color background;
-  final String name;
-  final String sub;
+  final CloudFile file;
   final VoidCallback onTap;
+
+  static const Map<FileCategory, IconData> _icons = <FileCategory, IconData>{
+    FileCategory.image: Icons.image,
+    FileCategory.doc: Icons.table_chart,
+    FileCategory.video: Icons.movie,
+    FileCategory.music: Icons.audio_file,
+    FileCategory.zip: Icons.folder_zip,
+    FileCategory.other: Icons.insert_drive_file,
+    FileCategory.all: Icons.insert_drive_file,
+  };
+
+  static const Map<FileCategory, Color> _tints = <FileCategory, Color>{
+    FileCategory.image: QyColors.primary,
+    FileCategory.doc: QyColors.mintDeep,
+    FileCategory.video: QyColors.amberDeep,
+    FileCategory.music: QyColors.violetDeep,
+    FileCategory.zip: QyColors.pinkDeep,
+    FileCategory.other: QyColors.sub,
+    FileCategory.all: QyColors.sub,
+  };
+
+  static const Map<FileCategory, Color> _backgrounds = <FileCategory, Color>{
+    FileCategory.image: QyColors.primaryLight,
+    FileCategory.doc: QyColors.mintSoft,
+    FileCategory.video: QyColors.amberSoft,
+    FileCategory.music: QyColors.violetSoft,
+    FileCategory.zip: QyColors.pinkSoft,
+    FileCategory.other: QyColors.track,
+    FileCategory.all: QyColors.track,
+  };
 
   @override
   Widget build(BuildContext context) {
+    final sub = <String>[
+      if (file.sizeLabel.isNotEmpty) file.sizeLabel,
+      if (file.updatedLabel.isNotEmpty) file.updatedLabel,
+    ].join(' · ');
     return QyTapScale(
       onTap: onTap,
       child: Container(
@@ -274,15 +334,21 @@ class _FileRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: <Widget>[
-            ProtoTypeIcon(icon: icon, color: iconColor, background: background),
+            ProtoTypeIcon(
+              icon: _icons[file.category] ?? Icons.insert_drive_file,
+              color: _tints[file.category] ?? QyColors.sub,
+              background: _backgrounds[file.category] ?? QyColors.track,
+            ),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: ProtoText.name135),
-                  const SizedBox(height: 3),
-                  Text(sub, style: ProtoText.label105),
+                  Text(file.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: ProtoText.name135),
+                  if (sub.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 3),
+                    Text(sub, style: ProtoText.label105),
+                  ],
                 ],
               ),
             ),

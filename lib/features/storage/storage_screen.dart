@@ -4,11 +4,37 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 
+import '../../core/models/cloud_models.dart';
+import '../../core/network/cloud_repository.dart';
 import '../../widgets/proto_widgets.dart';
 
-/// 06 存储空间（对齐 screen-storage）。
-class StorageScreen extends StatelessWidget {
+/// 06 存储空间（对齐 screen-storage）。占比来自 lanflare 容量概览。
+class StorageScreen extends StatefulWidget {
   const StorageScreen({super.key});
+
+  @override
+  State<StorageScreen> createState() => _StorageScreenState();
+}
+
+class _StorageScreenState extends State<StorageScreen> {
+  final CloudRepository _repo = CloudRepository();
+  StorageSummary? _summary;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final summary = await _repo.storageSummary();
+      if (!mounted) return;
+      setState(() => _summary = summary);
+    } catch (_) {
+      // 加载失败时保持占位展示。
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +58,7 @@ class StorageScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          const _Donut(),
+          _Donut(summary: _summary),
           const _LegendGrid(),
           const _CleanCard(),
           const _UpgradeCard(),
@@ -45,10 +71,16 @@ class StorageScreen extends StatelessWidget {
 }
 
 class _Donut extends StatelessWidget {
-  const _Donut();
+  const _Donut({this.summary});
+
+  final StorageSummary? summary;
 
   @override
   Widget build(BuildContext context) {
+    final clamped = (summary?.ratio ?? 0).clamp(0.0, 1.0);
+    final label = summary == null
+        ? '— / — GB'
+        : '${summary!.usedGb.toStringAsFixed(1)} / ${summary!.totalGb.toStringAsFixed(0)} GB';
     return Center(
       child: SizedBox(
         width: 172,
@@ -61,24 +93,18 @@ class _Donut extends StatelessWidget {
               child: Container(
                 width: 172,
                 height: 172,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: SweepGradient(
-                    stops: <double>[0, 0.244, 0.244, 0.446, 0.446, 0.581, 0.581, 0.68, 0.68, 1],
-                    colors: <Color>[
+                    stops: <double>[0, clamped, clamped, 1],
+                    colors: const <Color>[
                       Color(0xFF4C8DFF),
                       Color(0xFF4C8DFF),
-                      QyColors.mint,
-                      QyColors.mint,
-                      QyColors.amber,
-                      QyColors.amber,
-                      Color(0xFFA78BFF),
-                      Color(0xFFA78BFF),
                       Color(0xFFE9EEF7),
                       Color(0xFFE9EEF7),
                     ],
                   ),
-                  boxShadow: <BoxShadow>[
+                  boxShadow: const <BoxShadow>[
                     BoxShadow(color: Color(0x661F4899), blurRadius: 34, offset: Offset(0, 16), spreadRadius: -18),
                   ],
                 ),
@@ -89,24 +115,24 @@ class _Donut extends StatelessWidget {
               height: 124,
               decoration: const BoxDecoration(color: QyColors.surface, shape: BoxShape.circle),
             ),
-            const Column(
+            Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text.rich(
                   TextSpan(
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -1, color: QyColors.ink),
                     children: <TextSpan>[
-                      TextSpan(text: '68'),
-                      TextSpan(
+                      TextSpan(text: '${(clamped * 100).round()}'),
+                      const TextSpan(
                         text: '%',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: QyColors.muted),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 3),
-                Text('174.2 / 256 GB', style: ProtoText.label105),
+                const SizedBox(height: 3),
+                Text(label, style: ProtoText.label105),
               ],
             ),
           ],

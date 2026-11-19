@@ -32,6 +32,23 @@ extension FileCategoryX on FileCategory {
         FileCategory.zip => QyColors.coral,
         FileCategory.all || FileCategory.other => QyColors.sub,
       };
+
+  /// 由文件扩展名推断分类（lanflare 节点无分类字段，按名称映射）。
+  static FileCategory fromFileName(String name) {
+    final ext =
+        name.contains('.') ? name.split('.').last.toLowerCase() : '';
+    const image = <String>['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'svg'];
+    const video = <String>['mp4', 'm4v', 'webm', 'mov', 'avi', 'mkv', 'flv'];
+    const music = <String>['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'];
+    const doc = <String>['doc', 'docx', 'pdf', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'md', 'csv'];
+    const zip = <String>['zip', 'rar', '7z', 'tar', 'gz'];
+    if (image.contains(ext)) return FileCategory.image;
+    if (video.contains(ext)) return FileCategory.video;
+    if (music.contains(ext)) return FileCategory.music;
+    if (doc.contains(ext)) return FileCategory.doc;
+    if (zip.contains(ext)) return FileCategory.zip;
+    return FileCategory.other;
+  }
 }
 
 /// 云端文件条目。
