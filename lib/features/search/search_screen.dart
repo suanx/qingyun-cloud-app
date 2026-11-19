@@ -274,8 +274,8 @@ class _ResultList extends StatelessWidget {
             for (final file in files)
               QyTapScale(
                 onTap: () => context.go(QyRoutes.preview),
-                child: Container(
-                  decoration: const BoxDecoration(
+                child: const Container(
+                  decoration: BoxDecoration(
                     border: Border(top: BorderSide(color: QyColors.divider)),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
