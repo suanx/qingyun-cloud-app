@@ -114,7 +114,7 @@ class ApiClient {
     Map<String, dynamic>? query,
     void Function(int received, int total)? onReceiveProgress,
   }) async {
-    await _guard(() => _dio.download<dynamic>(
+    await _guard(() => _dio.download(
           path,
           savePath,
           queryParameters: query,

@@ -108,7 +108,7 @@ class _MemoryBanner extends StatelessWidget {
               colors: <Color>[QyColors.primary, Color(0xFF5AA9FF), Color(0xFF37C9B4)],
             ),
           ),
-          child: Stack(
+          child: const Stack(
             children: <Widget>[
               const Positioned(
                 right: 16,
