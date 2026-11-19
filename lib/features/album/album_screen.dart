@@ -110,20 +110,20 @@ class _MemoryBanner extends StatelessWidget {
           ),
           child: const Stack(
             children: <Widget>[
-              const Positioned(
+              Positioned(
                 right: 16,
                 bottom: 14,
                 child: Icon(Icons.play_circle_filled, size: 26, color: QyColors.onDark),
               ),
               Padding(
-                padding: const EdgeInsets.all(14),
+                padding: EdgeInsets.all(14),
                 child: Align(
                   alignment: Alignment.bottomLeft,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Text(
+                      Text(
                         '我的照片回忆',
                         style: TextStyle(
                           fontSize: 14,
@@ -131,8 +131,8 @@ class _MemoryBanner extends StatelessWidget {
                           color: QyColors.onDark,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      const Text(
+                      SizedBox(height: 3),
+                      Text(
                         '示例内容 · 暂未接入回忆生成服务',
                         style: TextStyle(fontSize: 11, color: Color(0xCCFFFFFF)),
                       ),
