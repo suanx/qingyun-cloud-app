@@ -479,7 +479,8 @@ class _PreviewScreenState extends State<PreviewScreen> {
             swipeHorizontal: false,
             pageFling: true,
             autoSpacing: true,
-            backgroundColor: QyColors.darkBg,
+            // 注：flutter_pdfview 1.3.2 的 PDFView 没有 backgroundColor 参数
+            // （1.4.x 才有，而 1.4.x 需 AGP 8.11，与当前工具链不兼容），勿加回。
             onRender: (pages) {
               if (!mounted) return;
               setState(() => _pdfPages = pages is int ? pages : 0);

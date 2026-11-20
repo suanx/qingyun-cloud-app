@@ -541,7 +541,7 @@ class _FramePainter extends CustomPainter {
     canvas.drawLine(Offset(w, 0), Offset(w, len), paint);
     // 左下
     canvas.drawLine(Offset(0, h - len), Offset(0, h), paint);
-    canvas.drawLine(Offset(0, h), const Offset(len, h), paint);
+    canvas.drawLine(Offset(0, h), Offset(len, h), paint);
     // 右下
     canvas.drawLine(Offset(w - len, h), Offset(w, h), paint);
     canvas.drawLine(Offset(w, h), Offset(w, h - len), paint);

@@ -849,7 +849,7 @@ class _MemoryCard extends StatelessWidget {
       headline = '暂无推荐内容';
       subtitle = '上传照片后会在这里生成回忆';
     } else {
-      tag = data!.tag;
+      tag = data.tag;
       headline = data.title.isEmpty ? data.date : data.title;
       subtitle = data.subtitle;
     }
@@ -942,7 +942,7 @@ class _MemoryCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (hasData && data!.photos.isNotEmpty)
+                if (hasData && data.photos.isNotEmpty)
                   Positioned(
                     right: 0,
                     top: 2,

@@ -253,7 +253,8 @@ class ApiClient {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-      case DioExceptionType.transformTimeout:
+        // 注：dio 5.4.0 的 DioExceptionType 没有 transformTimeout（5.5+ 才有），
+        // 转换超时在当前版本会落到 receiveTimeout / unknown 分支。
         return ApiException.timeout();
       case DioExceptionType.cancel:
         return ApiException.cancelled();
