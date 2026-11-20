@@ -56,7 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
           .login(account, password, totpCode: _totp.text.trim());
       if (!mounted) return;
       await AdminGate.instance.refresh();
-    showQyToast(context, '欢迎回来，$username');
+      if (!mounted) return;
+      showQyToast(context, '欢迎回来，$username');
       context.go(QyRoutes.home);
     } on ApiException catch (error) {
       if (!mounted) return;

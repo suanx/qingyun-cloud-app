@@ -214,7 +214,7 @@ class _HelpScreenState extends State<HelpScreen> {
                 ),
               ],
             ),
-            _SectionTitle('常见问题'),
+            const _SectionTitle('常见问题'),
             _Card(
               child: Column(
                 children: <Widget>[
@@ -226,7 +226,7 @@ class _HelpScreenState extends State<HelpScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _SectionTitle('提交反馈'),
+            const _SectionTitle('提交反馈'),
             _Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -293,7 +293,7 @@ class _HelpScreenState extends State<HelpScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _SectionTitle('我的反馈'),
+            const _SectionTitle('我的反馈'),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 36),
@@ -330,7 +330,7 @@ class _HelpScreenState extends State<HelpScreen> {
               ),
             if (_isAdmin) ...<Widget>[
               const SizedBox(height: 16),
-              _SectionTitle('反馈管理（仅管理员）'),
+              const _SectionTitle('反馈管理（仅管理员）'),
               if (_adminItems.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 22),
@@ -588,7 +588,7 @@ class _FeedbackTile extends StatelessWidget {
             const SizedBox(height: 9),
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: QyColors.mintSoft,
                 borderRadius: const BorderRadius.all(Radius.circular(9)),
               ),

@@ -988,7 +988,7 @@ class _SelectionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: QyColors.surface,
         borderRadius: const BorderRadius.all(Radius.circular(16)),
         boxShadow: const <BoxShadow>[

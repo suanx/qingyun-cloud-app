@@ -32,7 +32,7 @@ class _ScanScreenState extends State<ScanScreen> {
   final TextEditingController _manualController = TextEditingController();
   final TextEditingController _pwdController = TextEditingController();
 
-  MobileScannerController _controller = MobileScannerController();
+  final MobileScannerController _controller = MobileScannerController();
 
   _PermissionState _permission = _PermissionState.checking;
   _Stage _stage = _Stage.scanning;
@@ -630,7 +630,7 @@ class _ErrorCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: QyColors.pinkSoft,
         borderRadius: const BorderRadius.all(Radius.circular(14)),
       ),
@@ -697,7 +697,7 @@ class _BlockerCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: QyColors.amberSoft,
         borderRadius: const BorderRadius.all(Radius.circular(16)),
       ),
@@ -876,17 +876,17 @@ class _PreviewCard extends StatelessWidget {
               // 转存会写入 VFS 节点，普通用户为只读。深链直达 /scan 时同样
               // 保护，但解析结果仍可查看（纯读），不是把整页锁死。
               AdminOnly(
-                child: ElevatedButton.icon(
-                  onPressed: busy ? null : onRent,
-                  icon: const Icon(Icons.download_outlined, size: 16),
-                  label: Text(busy ? '转存中…' : '转存到云盘'),
-                ),
                 fallback: const Padding(
                   padding: EdgeInsets.symmetric(vertical: 10),
                   child: Text(
                     '当前为只读账号，转存需管理员',
                     style: TextStyle(fontSize: 12.5, color: QyColors.muted),
                   ),
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: busy ? null : onRent,
+                  icon: const Icon(Icons.download_outlined, size: 16),
+                  label: Text(busy ? '转存中…' : '转存到云盘'),
                 ),
               ),
             ],

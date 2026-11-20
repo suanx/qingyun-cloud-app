@@ -129,7 +129,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: QyColors.canvas,
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),

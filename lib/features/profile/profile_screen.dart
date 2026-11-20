@@ -222,7 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       iconColor: QyColors.violetDeep,
                       background: QyColors.violetSoft,
                       label: '安全中心',
-                      value: Text(
+                      value: const Text(
                         '两步验证 · 登录设备',
                         style: _cellValueStyle,
                       ),

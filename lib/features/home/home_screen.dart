@@ -505,7 +505,7 @@ class _StorageBar extends StatelessWidget {
     if (data == null || data.totalGb <= 0) {
       // 加载中 / 失败：整条中性 track，与容量环 ratio=0 的表现一致。
       return <Widget>[
-        Expanded(child: ColoredBox(color: QyColors.track)),
+        const Expanded(child: const ColoredBox(color: QyColors.track)),
       ];
     }
     final StorageCategoryStats c = data.byCategory;
@@ -528,7 +528,7 @@ class _StorageBar extends StatelessWidget {
     // 剩余段至少留 1 份权重，保证 track 可见；超过 1000 时按相对权重分配。
     out.add(Expanded(
       flex: math.max(1, 1000 - used),
-      child: ColoredBox(color: QyColors.track),
+      child: const ColoredBox(color: QyColors.track),
     ));
     return out;
   }

@@ -591,8 +591,8 @@ class VipUpdateResult {
   bool get cancelled => days <= 0;
 
   String get message => cancelled
-      ? '已取消 ${username} 的会员'
-      : '已为 ${username} 增加 $days 天，有效期至 ${formatEpochDate(vipUntil)}';
+      ? '已取消 $username 的会员'
+      : '已为 $username 增加 $days 天，有效期至 ${formatEpochDate(vipUntil)}';
 
   static VipUpdateResult fromJson(Map<String, dynamic> json) =>
       VipUpdateResult(

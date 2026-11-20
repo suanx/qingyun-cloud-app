@@ -244,7 +244,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Center(child: CircularProgressIndicator()),
             )
           else ...<Widget>[
-            _SectionTitle('服务地址'),
+            const _SectionTitle('服务地址'),
             _Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -320,7 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _SectionTitle('本地数据'),
+            const _SectionTitle('本地数据'),
             _Card(
               child: Column(
                 children: <Widget>[
@@ -341,12 +341,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _SectionTitle('关于'),
+            const _SectionTitle('关于'),
             _Card(
               child: Column(
                 children: <Widget>[
-                  _InfoRow(label: '应用版本', value: AppConfig.versionLabel),
-                  _InfoRow(label: '应用名称', value: AppConfig.appName),
+                  const _InfoRow(label: '应用版本', value: AppConfig.versionLabel),
+                  const _InfoRow(label: '应用名称', value: AppConfig.appName),
                   _InfoRow(
                     label: '后端版本',
                     value: _serverInfo == null
@@ -436,7 +436,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: QyColors.primaryLight,
         borderRadius: const BorderRadius.all(Radius.circular(6)),
       ),
@@ -482,7 +482,7 @@ class _ConnectionResult extends StatelessWidget {
     if (error != null) {
       return Container(
         padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: QyColors.pinkSoft,
           borderRadius: const BorderRadius.all(Radius.circular(10)),
         ),
@@ -513,7 +513,7 @@ class _ConnectionResult extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: QyColors.mintSoft,
         borderRadius: const BorderRadius.all(Radius.circular(10)),
       ),
