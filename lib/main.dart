@@ -10,7 +10,7 @@ import 'core/network/api_client.dart';
 import 'core/network/token_store.dart';
 import 'core/router/app_router.dart';
 import 'core/utils/error_reporter.dart';
-import 'config/admin_gate.dart';
+import 'core/config/admin_gate.dart';
 
 void main() {
   runZonedGuarded<Future<void>>(

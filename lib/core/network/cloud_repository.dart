@@ -310,59 +310,14 @@ class CloudRepository {
   }
 
   // ---------------------------------------------------------------------------
-  // 存储账号绑定（蓝奏云会话）
-  // ---------------------------------------------------------------------------
-
-  /// 存储账号绑定详情：lanflare `GET /api/storage/account`。
-  ///
-  /// [check] 为 true 时后端会真实外呼存储服务端验证会话，
-  /// 因此「刷新检测」比列表页多一次外部请求，失败时页面会区分
-  /// 「会话失效」与「网络不可达」。绝不返回会话凭据本身。
-  Future<StorageAccountStatus> storageAccount({bool check = true}) async {
-    final data = _mapOf(
-      await _client.getRaw(
-        '/api/storage/account',
-        query: check ? null : <String, dynamic>{'check': '0'},
-      ),
-      '/api/storage/account',
-    );
-    return StorageAccountStatus.fromJson(data);
-  }
-
-  /// 绑定 / 重新绑定存储账号：lanflare `POST /api/storage/login`。
-  ///
-  /// 密码只在此次请求体中发送给后端换取会话，**不写入本地任何存储**。
-  /// 调用方应在成功后立即清空密码输入控制器。
-  Future<StorageBindResult> bindStorageAccount(
-    String username,
-    String password,
-  ) async {
-    final name = username.trim();
-    if (name.isEmpty || password.isEmpty) {
-      throw ApiException.unknown('请输入存储账号和密码');
-    }
-    if (name.length > 128 || password.length > 256) {
-      throw ApiException.unknown('存储账号或密码长度异常');
-    }
-    final data = _mapOf(
-      await _client.postRaw(
-        '/api/storage/login',
-        body: <String, dynamic>{'username': name, 'password': password},
-      ),
-      '/api/storage/login',
-    );
-    return StorageBindResult.fromJson(data);
-  }
-
-  /// 解绑存储账号：lanflare `POST /api/storage/logout`。
-  /// 只清服务端的会话与绑定元数据，不删除 VFS 文件记录。
-  Future<void> unbindStorageAccount() async {
-    await _client.postRaw('/api/storage/logout');
-  }
-
-  // ---------------------------------------------------------------------------
   // 登录设备 / API 令牌 / 两步验证
   // ---------------------------------------------------------------------------
+  //
+  // 注：旧版「每用户绑定存储账号」的仓库方法（storageAccount /
+  // bindStorageAccount / unbindStorageAccount）已删除。后端自存储账号池
+  // 改造后，账号由管理员在网页端统一管理，App 无绑定入口，池状态统一
+  // 经 accountStatus() 的 storage_pool 展示；/api/storage/account 等旧
+  // 端点仅为管理员运维兼容保留，App 不再调用，避免留下无入口的死代码。
 
   /// 登录凭证列表：lanflare `GET /api/tokens`（仅本人）。
   Future<ApiTokenList> listTokens() async {
@@ -412,6 +367,29 @@ class CloudRepository {
   Future<void> revokeToken(String id) async {
     _checkTokenId(id, api: '/api/tokens/:id');
     await _client.deleteRaw('/api/tokens/$id');
+  }
+
+  /// 自助修改本人登录密码：`POST /api/auth/change-password`。
+  ///
+  /// 后端校验当前密码后才写入（目标用户恒为当前登录者），普通用户可用；
+  /// 成功后现有会话与令牌继续有效，无需重新登录。
+  Future<void> changePassword({
+    required String current,
+    required String next,
+  }) async {
+    if (current.isEmpty) {
+      throw ApiException.unknown('请输入当前密码');
+    }
+    if (next.length < 6) {
+      throw ApiException.unknown('新密码至少 6 位');
+    }
+    if (next == current) {
+      throw ApiException.unknown('新密码不能与当前密码相同');
+    }
+    await _client.postRaw('/api/auth/change-password', body: <String, dynamic>{
+      'current': current,
+      'next': next,
+    });
   }
 
   static void _checkTokenId(String id, {required String api}) {

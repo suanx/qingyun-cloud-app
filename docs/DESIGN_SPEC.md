@@ -68,7 +68,7 @@
 | `/admin-vip` | 会员管理 | 仅 admin，`GET /api/admin/users` + `POST .../vip` |
 | `/security` | 安全中心 | 两步验证 + 账户信息 |
 | `/devices` | 登录设备 / API 令牌 | 令牌列表、新建、备注、吊销 |
-| `/storage-account` | 存储账号绑定 | 蓝奏云会话绑定 / 解绑 / 连通性检测 |
+| ~~`/storage-account`~~ | ~~存储账号绑定~~ | 已移除：后端账号池改造后存储账号由管理员网页端统一管理，App 无此页（2026-11-20 对接核查） |
 | `/help` | 帮助与反馈 | 真实 FAQ + 反馈提交 / 回复 |
 | `/settings` | 设置 | 服务地址、连接自检（含 `signing_mode`）、本地数据清理 |
 | `/scan` | 扫一扫 | 摄像头识别 → 分享解析 → 转存到目录 |

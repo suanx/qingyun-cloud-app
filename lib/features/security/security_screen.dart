@@ -239,6 +239,92 @@ class _SecurityScreenState extends State<SecurityScreen> {
     if (mounted) await _load();
   }
 
+  /// 修改登录密码：`POST /api/auth/change-password`（后端校验当前密码）。
+  Future<void> _changePassword() async {
+    if (_busy) return;
+    final TextEditingController currentController = TextEditingController();
+    final TextEditingController nextController = TextEditingController();
+    final TextEditingController confirmController = TextEditingController();
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) => AlertDialog(
+          title: const Text('修改登录密码'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: currentController,
+                obscureText: true,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: '当前密码',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nextController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '新密码（至少 6 位）',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '再次输入新密码',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('确认修改'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      final current = currentController.text;
+      final next = nextController.text;
+      if (next != confirmController.text) {
+        showQyToast(context, '两次输入的新密码不一致', success: false);
+        return;
+      }
+      setState(() => _busy = true);
+      await _repo.changePassword(current: current, next: next);
+      if (!mounted) return;
+      showQyToast(context, '密码已修改，下次登录请使用新密码', success: true);
+    } on ApiException catch (error) {
+      if (mounted) {
+        showQyToast(context, '修改失败：${error.message}', success: false);
+      }
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'security#password');
+      if (mounted) {
+        showQyToast(context, '修改失败，请稍后重试', success: false);
+      }
+    } finally {
+      currentController.dispose();
+      nextController.dispose();
+      confirmController.dispose();
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = _twoFactor;
@@ -276,7 +362,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 },
               ),
               const SizedBox(height: 14),
-              _EntryCard(onDevices: _openDevices),
+              _EntryCard(
+                onDevices: _openDevices,
+                onChangePassword: _changePassword,
+              ),
               const Padding(
                 padding: EdgeInsets.fromLTRB(18, 16, 18, 0),
                 child: Text(
@@ -464,9 +553,10 @@ class _TwoFactorCard extends StatelessWidget {
 }
 
 class _EntryCard extends StatelessWidget {
-  const _EntryCard({required this.onDevices});
+  const _EntryCard({required this.onDevices, required this.onChangePassword});
 
   final VoidCallback onDevices;
+  final VoidCallback onChangePassword;
 
   @override
   Widget build(BuildContext context) {
@@ -476,40 +566,84 @@ class _EntryCard extends StatelessWidget {
         color: QyColors.surface,
         borderRadius: BorderRadius.all(Radius.circular(14)),
       ),
-      child: QyTapScale(
-        onTap: onDevices,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: QyColors.amberSoft,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-                child: const Icon(Icons.devices,
-                    size: 18, color: QyColors.amberDeep),
+      child: Column(
+        children: <Widget>[
+          QyTapScale(
+            onTap: onDevices,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+              child: Row(
+                children: <Widget>[
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: QyColors.amberSoft,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: const Icon(Icons.devices,
+                        size: 18, color: QyColors.amberDeep),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('登录设备管理',
+                            style:
+                                TextStyle(fontSize: 13.5, color: QyColors.ink)),
+                        SizedBox(height: 3),
+                        Text('查看凭证、备注设备、吊销下线',
+                            style:
+                                TextStyle(fontSize: 11, color: QyColors.muted)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right,
+                      size: 18, color: QyColors.chevron),
+                ],
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text('登录设备管理',
-                        style: TextStyle(fontSize: 13.5, color: QyColors.ink)),
-                    SizedBox(height: 3),
-                    Text('查看凭证、备注设备、吊销下线',
-                        style:
-                            TextStyle(fontSize: 11, color: QyColors.muted)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, size: 18, color: QyColors.chevron),
-            ],
+            ),
           ),
-        ),
+          const Divider(height: 1, indent: 15, endIndent: 15),
+          QyTapScale(
+            onTap: onChangePassword,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+              child: Row(
+                children: <Widget>[
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: QyColors.canvas,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: const Icon(Icons.lock_outline,
+                        size: 18, color: QyColors.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('修改登录密码',
+                            style:
+                                TextStyle(fontSize: 13.5, color: QyColors.ink)),
+                        SizedBox(height: 3),
+                        Text('需验证当前密码，修改后下次登录生效',
+                            style:
+                                TextStyle(fontSize: 11, color: QyColors.muted)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right,
+                      size: 18, color: QyColors.chevron),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -119,7 +119,11 @@ App 内「会员管理」页（`AppRouter.adminVip`，仅 `role=admin` 可见）
 
 开启 2FA 后，`POST /api/auth/login` 会返回 `401 {error:"需要两步验证码", needs_2fa:true}`；登录页已有验证码输入框，失败时自动聚焦并把键盘切成数字，不会把用户锁在门外。`enable/disable` 均校验请求体容错与 6 位数字格式，避免 VPS 上收到畸形 JSON 直接 500。
 
-### 2.4 存储账号绑定契约（VPS 部署必做）
+**自助修改密码（2026-11-20 对接核查新增）**：`POST /api/auth/change-password {current, next}`。此前两端都声称保留「改自己密码」的自助能力，但后端实际没有端点、App 也没有入口，用户只能找管理员重置。现后端已补齐：需登录态，目标用户恒为当前登录者（不接受指定 uid），校验当前密码后才写入，新密码 ≥6 位且不能与当前相同；`/api/auth/*` 属自助写白名单，普通用户可用，`ro` 令牌仍被守卫拦截。App 安全中心已加「修改登录密码」入口（`CloudRepository.changePassword`），成功后现有会话与令牌继续有效。
+
+### 2.4 存储账号绑定契约（历史契约，账号池改造后 App 已不调用）
+
+> **2026-11-20 对接核查更新**：后端已完成「管理员全局存储账号池」改造（见后端 README「存储账号池」与 2.18 预留节口径）：存储账号由管理员在网页端统一管理，App 无绑定入口，池状态经 `GET /api/status` 的 `storage_pool` 展示。本节三个端点在后端仅作管理员运维兼容保留（`GET /api/storage/account` 已改为管理员专用），App 仓库层对应的死代码（`storageAccount / bindStorageAccount / unbindStorageAccount` 与 `StorageAccountStatus / StorageBindResult` 模型）已删除。下文契约仅供运维脚本与历史排查参考。
 
 **两个账号不要混**：`AccountStatus.username` 是 lanflare 的 App 登录账号（users 表）；`StorageAccountStatus.username` 是蓝奏云存储账号（绑定时写入 `u<uid>:storage_account`）。文件物理存放在后者，未绑定时 `/api/delete`、`/api/storage/clean` 等会返回 503「请先绑定存储账号」，上传/下载/分享同样不可用。
 
@@ -253,7 +257,7 @@ FAQ 7 条全部描述本项目**已落地**的真实行为（双账号模型、2
 - `GET /api/admin/feedback` + `PATCH /api/admin/feedback/:id`：`requireAdmin()` 守卫，管理员看全量并回复 / 标记 `open/replied/closed`，回复 ≤2000 字；清空回复会归零 `replied_at`
 - `ro` 令牌被全局守卫拦在写接口外；提交后用户能在「我的反馈」看到管理员回复，闭环不依赖任何第三方服务
 
-**VPS 迁移**：`schema.sql` 已加 `CREATE TABLE IF NOT EXISTS feedback` + 索引；`migrations/007_feedback.sql` 供已存在的库升级。`src/server/main.ts` 本来就逐语句重放所有迁移，全新库与旧库都会得到该表，**无需改启动代码**。Cloudflare D1 运营者需手动执行一次 007（命令写在迁移文件头注释里）。`GET /api/server-info` 回显的 `schema_version` 同步为 7。
+**VPS 迁移**：`schema.sql` 已加 `CREATE TABLE IF NOT EXISTS feedback` + 索引；`migrations/007_feedback.sql` 供已存在的库升级。`src/server/main.ts` 本来就逐语句重放所有迁移，全新库与旧库都会得到该表，**无需改启动代码**。Cloudflare D1 运营者需手动执行一次 007（命令写在迁移文件头注释里）。`GET /api/server-info` 回显的 `schema_version` 同步为 7（其后存储账号池迁移 008 落地后已升为 **8**，以服务端 `SCHEMA_VERSION` 常量为准）。
 
 ### 2.10 扫一扫 / 分享转存契约
 
