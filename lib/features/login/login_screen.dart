@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
-
 import '../../core/network/api_exception.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/utils/error_reporter.dart';
 import '../../widgets/proto_widgets.dart';
+import '../../core/config/admin_gate.dart';
 
 /// 登录页：lanflare 账号密码登录（`POST /api/auth/login`）。
 ///
 /// - 支持可选的两步验证码（lanflare 开启 TOTP 时填写）。
-/// - 成功后凭证持久化到 TokenStore，之后所有请求自动携带 Basic 认证。
+/// - 成功后换取可吊销的 `lf_` API 令牌存入 TokenStore，
+///   之后请求自动携带 `Authorization: Bearer`；令牌换发失败时降级为会话 Cookie。
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -22,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _password = TextEditingController();
   final TextEditingController _totp = TextEditingController();
   final FocusNode _passwordFocus = FocusNode();
+  final FocusNode _totpFocus = FocusNode();
 
   bool _obscure = true;
   bool _submitting = false;
@@ -33,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _password.dispose();
     _totp.dispose();
     _passwordFocus.dispose();
+    _totpFocus.dispose();
     super.dispose();
   }
 
@@ -51,12 +55,19 @@ class _LoginScreenState extends State<LoginScreen> {
       final username = await CloudRepository()
           .login(account, password, totpCode: _totp.text.trim());
       if (!mounted) return;
-      showQyToast(context, '欢迎回来，$username');
+      await AdminGate.instance.refresh();
+    showQyToast(context, '欢迎回来，$username');
       context.go(QyRoutes.home);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _error = error.message);
-    } catch (_) {
+      // 后端开启 TOTP 后返回 401「需要两步验证码」：直接把焦点送到验证码框，
+      // 用户不用再手动点一次，避免「开了 2FA 就登不进来」的体验断点。
+      if (error.message.contains('验证码') || error.message.contains('两步')) {
+        _totpFocus.requestFocus();
+      }
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'login_screen#1');
       if (!mounted) return;
       setState(() => _error = '登录失败，请检查网络后重试');
     } finally {
@@ -134,7 +145,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   _Field(
                     controller: _totp,
                     icon: Icons.shield_outlined,
-                    hint: '开启 TOTP 后填写 6 位验证码',
+                    hint: '开启两步验证后填写 6 位验证码',
+                    focusNode: _totpFocus,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _submit(),
                   ),
@@ -183,6 +197,8 @@ class _Field extends StatelessWidget {
     this.textInputAction,
     this.onSubmitted,
     this.suffix,
+    this.keyboardType,
+    this.maxLength,
   });
 
   final TextEditingController controller;
@@ -193,6 +209,8 @@ class _Field extends StatelessWidget {
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final Widget? suffix;
+  final TextInputType? keyboardType;
+  final int? maxLength;
 
   @override
   Widget build(BuildContext context) {
@@ -209,6 +227,8 @@ class _Field extends StatelessWidget {
               focusNode: focusNode,
               obscureText: obscure,
               textInputAction: textInputAction,
+              keyboardType: keyboardType,
+              maxLength: maxLength,
               onSubmitted: onSubmitted,
               style: const TextStyle(fontSize: 14.5, color: QyColors.ink),
               decoration: InputDecoration(
@@ -217,6 +237,7 @@ class _Field extends StatelessWidget {
                 hintText: hint,
                 hintStyle: const TextStyle(fontSize: 13.5, color: QyColors.muted),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                counterText: '',
               ),
             ),
           ),

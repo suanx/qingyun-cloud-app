@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
-
 import '../../core/models/cloud_models.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/utils/error_reporter.dart';
+import '../../core/config/admin_gate.dart';
 
 /// 回收站场景：已删除文件列表 + 恢复 / 彻底删除 / 清空。
 /// 数据来自 lanflare `/api/bin`，操作对应 `/api/restore`、`/api/empty-bin`。
@@ -34,7 +35,8 @@ class _TrashScreenState extends State<TrashScreen> {
         _files = files;
         _loading = false;
       });
-    } catch (_) {
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'trash_screen#1');
       if (!mounted) return;
       setState(() {
         _files = const <CloudFile>[];
@@ -79,9 +81,11 @@ class _TrashScreenState extends State<TrashScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         actions: <Widget>[
-          TextButton(
-            onPressed: _files.isEmpty ? null : _empty,
-            child: const Text('清空'),
+          AdminOnly(
+            child: TextButton(
+              onPressed: _files.isEmpty ? null : _empty,
+              child: const Text('清空'),
+            ),
           ),
         ],
       ),
@@ -92,7 +96,7 @@ class _TrashScreenState extends State<TrashScreen> {
                 ? const QyEmptyState(
                     icon: QyIcons.trash,
                     title: '回收站是空的',
-                    description: '删除的文件会在这里保留 30 天',
+                    description: '删除的文件会保留在回收站',
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(20),
@@ -104,9 +108,11 @@ class _TrashScreenState extends State<TrashScreen> {
                         leading: QyIcon(file.category.iconName, size: 32, color: QyColors.muted),
                         title: file.name,
                         subtitle: file.updatedLabel,
-                        trailing: TextButton(
-                          onPressed: () => _restore(file),
-                          child: const Text('恢复'),
+                        trailing: AdminOnly(
+                          child: TextButton(
+                            onPressed: () => _restore(file),
+                            child: const Text('恢复'),
+                          ),
                         ),
                       );
                     },

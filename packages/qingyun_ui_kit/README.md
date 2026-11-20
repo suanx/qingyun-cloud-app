@@ -6,8 +6,7 @@
 
 - `lib/theme/` — 色彩、字体、圆角、间距、阴影与 `ThemeData`
 - `lib/components/` — 图标、按钮、卡片、列表项、进度条、底部导航、空状态、Toast
-- `lib/router/` — 12 个场景的路由常量与 `go_router` 骨架
-- `example/` — 组件展示 Demo
+- `lib/router/` — 页面路由路径常量（`QyRoutes`）
 
 ## 接入方式
 
@@ -54,11 +53,3 @@ QyIcon(QyIcons.cloud, size: 24, color: QyColors.ink)
 - 全案无紫色；主色 `#FFC94A`，背景 `#FFF8E7`
 - 按钮高度 52，卡片圆角 22，胶囊导航高 62
 - 阴影使用 12% 暖黄色，偏移 y+6、模糊 18
-
-## 运行 Demo
-
-```bash
-cd example
-flutter pub get
-flutter run
-```

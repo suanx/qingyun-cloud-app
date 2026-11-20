@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
-
+import '../../features/admin/admin_vip_screen.dart';
 import '../../features/album/album_screen.dart';
+import '../../features/album/recall_album_screen.dart';
 import '../../features/files/files_screen.dart';
+import '../../features/help/help_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/login/login_screen.dart';
 import '../../features/preview/preview_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/scan/scan_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/security/devices_screen.dart';
+import '../../features/security/security_screen.dart';
+import '../../features/settings/settings_screen.dart';
 import '../../features/shares/shares_screen.dart';
 import '../../features/storage/storage_screen.dart';
 import '../../features/transfers/transfers_screen.dart';
 import '../../features/trash/trash_screen.dart';
-import '../config/app_config.dart';
 import '../models/cloud_models.dart';
 import '../network/token_store.dart';
 
@@ -23,12 +28,6 @@ import '../network/token_store.dart';
 /// 搜索 / 存储空间 / 文件预览 / 相册为独立推入页。
 /// 原型之外的旧场景路由一律重定向，保证 App 内任何入口都只有新设计。
 abstract final class AppRouter {
-  /// 功能演示相关路由（历史常量，保留以兼容演示页代码；路由已重定向）。
-  static const String demo = '/demo';
-  static const String demoComponents = '/demo/components';
-  static const String demoNetwork = '/demo/network';
-  static const String demoBoundary = '/demo/boundary';
-
   /// 历史功能入口路由（重定向到原型对应页面）。
   static const String gallery = '/gallery';
   static const String allFiles = '/all-files';
@@ -43,10 +42,6 @@ abstract final class AppRouter {
     gallery: QyRoutes.album,
     allFiles: QyRoutes.files,
     videos: QyRoutes.files,
-    demo: QyRoutes.files,
-    demoComponents: QyRoutes.files,
-    demoNetwork: QyRoutes.files,
-    demoBoundary: QyRoutes.files,
   };
 
   /// 登录页（对接 lanflare 时未登录一律先到这里）。
@@ -55,10 +50,29 @@ abstract final class AppRouter {
   /// 我的分享：后端 GET /api/my-shares + DELETE /api/shares/:id。
   static const String myShares = '/my-shares';
 
+  /// 会员管理（仅 admin）：后端 GET /api/admin/users + POST .../vip。
+  static const String adminVip = '/admin-vip';
+
+  /// 安全中心：两步验证 + 登录设备入口。
+  static const String security = '/security';
+
+  /// 登录设备 / API 令牌管理。
+  static const String devices = '/devices';
+
+  /// 帮助与反馈：真实 FAQ + 提交 / 查看反馈（管理员可回复）。
+  static const String help = '/help';
+
+  /// 设置：服务地址、连接自检、本地数据清理、版本信息。
+  static const String settings = '/settings';
+
+  /// 扫一扫：摄像头识别分享二维码 → 解析 → 转存到指定目录。
+  static const String scan = '/scan';
+
+  /// 照片回忆轮播：后端按真实上传日期分组的图片 + 签名预览 URL，零视频生成。
+  static const String recallAlbum = '/recall-album';
+
   /// 登录态守卫：未登录跳登录页；已登录访问登录页回首页。
-  /// mock 模式（useMockData = true）不强制登录。
   static String? _authGuard(BuildContext _, GoRouterState state) {
-    if (AppConfig.useMockData) return null;
     final loggedIn = TokenStore.credential?.isNotEmpty ?? false;
     final atLogin = state.matchedLocation == login;
     if (!loggedIn && !atLogin) return login;
@@ -67,8 +81,8 @@ abstract final class AppRouter {
   }
 
   /// HTTP 401 全局处理：清凭证并回到登录页（main 里注册到 ApiClient）。
-  static void handleUnauthorized() {
-    TokenStore.clear();
+  static Future<void> handleUnauthorized() async {
+    await TokenStore.clear();
     router.go(login);
   }
 
@@ -98,6 +112,16 @@ abstract final class AppRouter {
       GoRoute(path: QyRoutes.storage, builder: (_, __) => const StorageScreen()),
       GoRoute(path: QyRoutes.trash, builder: (_, __) => const TrashScreen()),
       GoRoute(path: myShares, builder: (_, __) => const SharesScreen()),
+      GoRoute(path: adminVip, builder: (_, __) => const AdminVipScreen()),
+      GoRoute(path: security, builder: (_, __) => const SecurityScreen()),
+      GoRoute(path: devices, builder: (_, __) => const DevicesScreen()),
+      GoRoute(path: help, builder: (_, __) => const HelpScreen()),
+      GoRoute(path: settings, builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: scan, builder: (_, __) => const ScanScreen()),
+      GoRoute(
+        path: recallAlbum,
+        builder: (_, __) => const RecallAlbumScreen(),
+      ),
       GoRoute(
         path: QyRoutes.preview,
         // 预览必须携带文件对象；无参时回到文件页，避免旧占位页重现。

@@ -1,18 +1,25 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 import 'package:video_player/video_player.dart';
-
 import '../../core/models/cloud_models.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/utils/error_reporter.dart';
 import '../../widgets/proto_widgets.dart';
+import '../../core/config/admin_gate.dart';
 
-/// 07 文件预览：按文件类型在线查看（图片/视频/音频/文本内联，
+/// 07 文件预览：按文件类型在线查看（图片/视频/音频/文本/PDF 内联，
 /// 其他类型走「下载并用系统应用打开」），底部工具全部接真实接口。
+///
+/// PDF 走 `/api/preview/url` 签发的短期能力 URL → 下载到私有临时目录 →
+/// 交给原生 PDFView（AndroidPdfViewer / PDFKit）渲染；带缓存、续签、密码、
+/// 翻页与失败降级，契约见 docs/BACKEND.md 2.15。
 class PreviewScreen extends StatefulWidget {
   const PreviewScreen({super.key, required this.file});
 
@@ -31,6 +38,17 @@ class _PreviewScreenState extends State<PreviewScreen> {
   String? _error;
   String? _title;
   bool _loading = true;
+
+  // PDF 内联预览状态（缓存路径、准备进度、渲染错误、页码、打开密码）。
+  String? _pdfPath;
+  String? _pdfError;
+  bool _pdfPreparing = false;
+  double _pdfProgress = 0;
+  int _pdfPages = 0;
+  int _pdfPage = 0;
+  int _pdfReloadKey = 0;
+  String? _pdfPassword;
+  PDFViewController? _pdfController;
 
   @override
   void initState() {
@@ -59,6 +77,8 @@ class _PreviewScreenState extends State<PreviewScreen> {
         await _initVideo(info.url);
       } else if (info.isText) {
         await _loadText(info.url);
+      } else if (info.isPdf) {
+        await _preparePdf(info);
       }
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -83,7 +103,8 @@ class _PreviewScreenState extends State<PreviewScreen> {
       if (!mounted) return;
       setState(() {});
       await controller.play();
-    } catch (_) {
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'preview_screen#1');
       // 播放器初始化失败时保留降级卡片，用户仍可下载后用系统播放器查看。
     }
   }
@@ -93,9 +114,101 @@ class _PreviewScreenState extends State<PreviewScreen> {
       final response = await Dio().get<String>(url);
       if (!mounted) return;
       setState(() => _textContent = response.data ?? '');
-    } catch (_) {
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'preview_screen#2');
       // 文本拉取失败不阻塞其他操作，展示下载入口即可。
     }
+  }
+
+  /// PDF：准备本地文件（缓存 / 续签 / 下载 / 长度校验），交给原生渲染器。
+  Future<void> _preparePdf(PreviewInfo info, {bool forceRefresh = false}) async {
+    if (!mounted) return;
+    setState(() {
+      _pdfPreparing = true;
+      _pdfError = null;
+      _pdfProgress = 0;
+      if (forceRefresh) {
+        _pdfPath = null;
+        _pdfController = null;
+        _pdfPages = 0;
+        _pdfPage = 0;
+        _pdfReloadKey++;
+      }
+    });
+    try {
+      if (forceRefresh) {
+        await _repo.clearPdfPreviewCache(
+          fileId: widget.file.id,
+          sizeBytes: info.sizeBytes,
+        );
+      }
+      final String path = await _repo.preparePdfPreview(
+        fileId: widget.file.id,
+        info: info,
+        onProgress: (double value) {
+          if (mounted) setState(() => _pdfProgress = value);
+        },
+        forceRefresh: forceRefresh,
+      );
+      if (!mounted) return;
+      setState(() {
+        _pdfPath = path;
+        _pdfPreparing = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _pdfError = e.message;
+        _pdfPreparing = false;
+      });
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'preview_screen#pdf');
+      if (!mounted) return;
+      setState(() {
+        _pdfError = error.toString();
+        _pdfPreparing = false;
+      });
+    }
+  }
+
+  /// 加密 PDF：输入打开密码后重建 PDFView（key 变化触发原生视图重建）。
+  Future<void> _askPdfPassword() async {
+    final TextEditingController controller = TextEditingController();
+    final String? value = await showDialog<String>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('PDF 打开密码'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          obscureText: true,
+          decoration: const InputDecoration(hintText: '留空则清除密码'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null || !mounted) return;
+    setState(() {
+      _pdfPassword = value.isEmpty ? null : value;
+      _pdfError = null;
+      _pdfReloadKey++;
+    });
+  }
+
+  void _gotoPage(int target) {
+    final PDFViewController? controller = _pdfController;
+    if (controller == null || _pdfPages <= 0) return;
+    unawaited(controller.setPage(target.clamp(0, _pdfPages - 1)));
   }
 
   @override
@@ -276,11 +389,133 @@ class _PreviewScreenState extends State<PreviewScreen> {
         ),
       );
     }
+    if (info.isPdf) return _pdfContent(info);
     return _Unsupported(
       icon: _fallbackIcon(widget.file.category),
-      hint: info.isPdf
-          ? 'PDF 可下载后使用系统应用打开'
-          : '该格式暂不支持内联查看，可下载后打开',
+      hint: '该格式暂不支持内联查看，可下载后打开',
+    );
+  }
+
+  Widget _pdfContent(PreviewInfo info) {
+    if (_pdfPreparing) {
+      final int percent = (_pdfProgress * 100).clamp(0, 100).toInt();
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const CircularProgressIndicator(color: QyColors.onDark),
+              const SizedBox(height: 16),
+              Text(
+                '正在准备 PDF · $percent%',
+                style: const TextStyle(fontSize: 12, color: Color(0xFFB9C3D4)),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: 200,
+                child: LinearProgressIndicator(
+                  value: _pdfProgress > 0 ? _pdfProgress : null,
+                  color: QyColors.primary,
+                  backgroundColor: const Color(0x33FFFFFF),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final String? path = _pdfPath;
+    final String? error = _pdfError;
+    if (path == null || error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(Icons.picture_as_pdf_outlined,
+                  size: 52, color: Color(0xAAFFFFFF)),
+              const SizedBox(height: 14),
+              Text(
+                error == null ? 'PDF 暂时无法加载' : 'PDF 加载失败：$error',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: Color(0xFFB9C3D4)),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '加密文件可输入打开密码；文件损坏或过大时请下载后查看',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Color(0xFF8D99AD)),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  _PdfAction(
+                    label: '重新加载',
+                    onTap: () => _preparePdf(info, forceRefresh: true),
+                  ),
+                  _PdfAction(label: '下载后打开', onTap: _download),
+                  _PdfAction(label: '打开密码', onTap: _askPdfPassword),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: PDFView(
+            // path / 密码 / 刷新序号任一变化都重建原生视图，避免复用旧句柄。
+            key: ValueKey<String>('$path#${_pdfPassword ?? ''}#$_pdfReloadKey'),
+            filePath: path,
+            password: _pdfPassword,
+            enableSwipe: true,
+            swipeHorizontal: false,
+            pageFling: true,
+            autoSpacing: true,
+            backgroundColor: QyColors.darkBg,
+            onRender: (pages) {
+              if (!mounted) return;
+              setState(() => _pdfPages = pages is int ? pages : 0);
+            },
+            onPageChanged: (page, total) {
+              if (!mounted) return;
+              setState(() {
+                _pdfPage = page is int ? page : 0;
+                if (total is int) _pdfPages = total;
+              });
+            },
+            onViewCreated: (PDFViewController controller) {
+              _pdfController = controller;
+            },
+            onError: (renderError) {
+              ErrorReporter.report(renderError ?? 'PDF 渲染失败',
+                  StackTrace.current, context: 'preview_screen#pdf-render');
+              if (!mounted) return;
+              setState(() => _pdfError = '无法渲染该 PDF：$renderError');
+            },
+            onPageError: (page, pageError) {
+              ErrorReporter.report(pageError ?? 'PDF 单页渲染失败',
+                  StackTrace.current, context: 'preview_screen#pdf-page');
+            },
+          ),
+        ),
+        _PdfBar(
+          page: _pdfPage,
+          pages: _pdfPages,
+          onPrev: () => _gotoPage(_pdfPage - 1),
+          onNext: () => _gotoPage(_pdfPage + 1),
+          onReload: () => _preparePdf(info, forceRefresh: true),
+          onDownload: _download,
+          onPassword: _askPdfPassword,
+        ),
+      ],
     );
   }
 
@@ -304,7 +539,8 @@ class _PreviewScreenState extends State<PreviewScreen> {
       showQyToast(context, '分享链接已复制', success: true);
     } on ApiException catch (e) {
       if (mounted) showQyToast(context, '分享失败：${e.message}');
-    } catch (_) {
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'preview_screen#3');
       if (mounted) showQyToast(context, '分享失败，请稍后重试');
     }
   }
@@ -319,8 +555,11 @@ class _PreviewScreenState extends State<PreviewScreen> {
       if (!mounted) return;
       showQyToast(context, '已下载到应用目录并尝试打开', success: true);
     } on ApiException catch (e) {
-      if (mounted) showQyToast(context, '下载失败：${e.message}');
-    } catch (_) {
+      // 主动暂停（CancelToken 取消）不是下载失败，状态已由传输任务模型落地。
+      if (e.isCancelled || !mounted) return;
+      showQyToast(context, '下载失败：${e.message}');
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'preview_screen#4');
       if (mounted) showQyToast(context, '下载失败，请稍后重试');
     }
   }
@@ -512,6 +751,93 @@ class _Unsupported extends StatelessWidget {
   }
 }
 
+class _PdfAction extends StatelessWidget {
+  const _PdfAction({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        side: const BorderSide(color: Color(0x66FFFFFF)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        textStyle: const TextStyle(fontSize: 11),
+      ),
+      child: Text(label),
+    );
+  }
+}
+
+class _PdfBar extends StatelessWidget {
+  const _PdfBar({
+    required this.page,
+    required this.pages,
+    required this.onPrev,
+    required this.onNext,
+    required this.onReload,
+    required this.onDownload,
+    required this.onPassword,
+  });
+
+  final int page;
+  final int pages;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+  final VoidCallback onReload;
+  final VoidCallback onDownload;
+  final VoidCallback onPassword;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool ready = pages > 0;
+    return Container(
+      height: 46,
+      color: const Color(0xFF141C29),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: <Widget>[
+          IconButton(
+            tooltip: '上一页',
+            icon: const Icon(Icons.chevron_left, color: Color(0xFFC6CFDE)),
+            onPressed: ready && page > 0 ? onPrev : null,
+          ),
+          Expanded(
+            child: Text(
+              ready ? '第 ${page + 1} / $pages 页' : 'PDF 加载中',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, color: Color(0xFFB9C3D4)),
+            ),
+          ),
+          IconButton(
+            tooltip: '下一页',
+            icon: const Icon(Icons.chevron_right, color: Color(0xFFC6CFDE)),
+            onPressed: ready && page < pages - 1 ? onNext : null,
+          ),
+          IconButton(
+            tooltip: '重新加载',
+            icon: const Icon(Icons.refresh, size: 19, color: Color(0xFFC6CFDE)),
+            onPressed: onReload,
+          ),
+          IconButton(
+            tooltip: '打开密码',
+            icon: const Icon(Icons.lock_outline, size: 19, color: Color(0xFFC6CFDE)),
+            onPressed: onPassword,
+          ),
+          IconButton(
+            tooltip: '下载后用系统应用打开',
+            icon: const Icon(Icons.download, size: 19, color: Color(0xFFC6CFDE)),
+            onPressed: onDownload,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Tools extends StatelessWidget {
   const _Tools({
     required this.onShare,
@@ -534,10 +860,16 @@ class _Tools extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: <Widget>[
-          _Tool(icon: Icons.share, label: '分享', onTap: onShare),
+          AdminOnly(
+            child: _Tool(icon: Icons.share, label: '分享', onTap: onShare),
+          ),
           _Tool(icon: Icons.download, label: '下载', onTap: onDownload),
-          _Tool(icon: Icons.edit, label: '重命名', onTap: onRename),
-          _Tool(icon: Icons.delete_outline, label: '删除', onTap: onDelete),
+          AdminOnly(
+            child: _Tool(icon: Icons.edit, label: '重命名', onTap: onRename),
+          ),
+          AdminOnly(
+            child: _Tool(icon: Icons.delete_outline, label: '删除', onTap: onDelete),
+          ),
           _Tool(icon: Icons.info, label: '详情', onTap: onDetails),
         ],
       ),

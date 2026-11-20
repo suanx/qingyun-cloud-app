@@ -18,11 +18,6 @@
 
 ## 落地结构
 
-### iOS
-- `ios/Runner/Assets.xcassets/AppIcon.appiconset/icon-1024.png` —— 母版直接落盘
-- `Contents.json` 保持 `universal / ios / 1024x1024`，Xcode 自动派生各尺寸
-- 注意：iOS 图标**必须不透明**，不要给母版加 alpha 通道
-
 ### Android
 | 资源 | 说明 |
 | --- | --- |
@@ -36,17 +31,16 @@
 避免无密度限定的默认资源在某些设备上串出旧图标。API < 26 由各密度 PNG 覆盖。
 
 前景矢量是从方案 A 原图的云朵/箭头轮廓提取并简化得到（73 个点），
-因此自适应图标与 iOS/legacy 位图的形状完全一致，且任意密度都清晰。
+因此自适应图标与 legacy 位图的形状完全一致，且任意密度都清晰。
 
 ## 更换流程
 
 1. 替换 `docs/assets/app-icon-master.png`
 2. 重新生成 5 个密度 legacy PNG（加 squircle 圆角 alpha）
-3. iOS 直接替换 `icon-1024.png`
-4. 若云形改了，重新提取轮廓更新 `drawable/ic_launcher_foreground.xml` 的 `pathData`
-5. 渐变色改了，更新 `ic_launcher_background_gradient.xml` 的三个色值
+3. 若云形改了，重新提取轮廓更新 `drawable/ic_launcher_foreground.xml` 的 `pathData`
+4. 渐变色改了，更新 `ic_launcher_background_gradient.xml` 的三个色值
 
 ## 未覆盖
 
-- Windows `.ico` / macOS `.icns`：本仓库是 Flutter 双端工程（android / ios），无桌面端目录
+- Windows `.ico` / macOS `.icns`：本仓库是 Flutter Android 工程，无桌面端目录
 - Android 启动屏 `drawable/launch_background.xml` 仍是纯白，未随图标改动

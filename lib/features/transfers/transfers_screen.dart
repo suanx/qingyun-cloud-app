@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
-
 import '../../core/models/cloud_models.dart';
 import '../../core/models/transfer_store.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/utils/error_reporter.dart';
+import '../../core/utils/upload_helper.dart';
 import '../../widgets/proto_widgets.dart';
 
 /// 03 传输中心（对齐 screen-transfer）。任务来自 App 本地传输记录
@@ -20,7 +22,7 @@ class _TransfersScreenState extends State<TransfersScreen> {
   @override
   Widget build(BuildContext context) {
     // 红框区域（标题 / 副标题 / 全部暂停 + 速度卡 + 筛选胶囊）固定不滚动，
-    // 下方任务列表与「今天已完成」单独滚动。等价原型 .nav / .transfer-sum /
+    // 下方任务列表与「最近完成」单独滚动。等价原型 .nav / .transfer-sum /
     // .chip-row 的 flex-shrink:0 + .scroll flex:1。
     return ColoredBox(
       color: QyColors.canvas,
@@ -29,33 +31,49 @@ class _TransfersScreenState extends State<TransfersScreen> {
         builder: (BuildContext context, _) {
           final store = LocalTransferStore.instance;
           final running = store.running;
+          final paused = store.paused;
           final done = store.done;
           final failed = store.failed;
           final chips = <String>[
-            '正在传输',
+            '进行中',
             '已完成',
             failed.isEmpty ? '失败' : '失败 ${failed.length}',
           ];
-          final visible = <List<TransferTask>>[running, done, failed][_chip];
+          // 暂停后任务不能再归到 running（请求已取消），但必须仍可见，
+          // 否则点「暂停」后卡片会莫名消失。
+          final active = <TransferTask>[...running, ...paused];
+          final visible = <List<TransferTask>>[active, done, failed][_chip];
+          final subtitle = running.isEmpty
+              ? (paused.isEmpty
+                  ? '当前没有进行中的任务'
+                  : '${paused.length} 个任务已暂停')
+              : (paused.isEmpty
+                  ? '${running.length} 个任务进行中'
+                  : '${running.length} 个任务进行中 · ${paused.length} 个已暂停');
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               ProtoNav(
                 title: '传输',
-                subtitle: running.isEmpty ? '当前没有进行中的任务' : '${running.length} 个任务进行中',
+                subtitle: subtitle,
                 actions: <Widget>[
                   QyTapScale(
                     onTap: () {
                       for (final task in running) {
                         store.pause(task.id);
                       }
-                      showQyToast(context, running.isEmpty ? '没有进行中的任务' : '已暂停全部任务');
+                      showQyToast(
+                        context,
+                        running.isEmpty
+                            ? '没有进行中的任务'
+                            : '已暂停全部任务（请求已取消，继续将重新开始）',
+                      );
                     },
                     child: const Text('全部暂停', style: ProtoText.sectionMore),
                   ),
                 ],
               ),
-              const _SpeedCard(active: true),
+              _SpeedCard(active: running.isNotEmpty),
               ProtoChipRow(
                 labels: chips,
                 activeIndex: _chip,
@@ -70,9 +88,9 @@ class _TransfersScreenState extends State<TransfersScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                         child: QyEmptyState(
-                          title: _chip == 0 ? '暂无进行中的任务' : (_chip == 1 ? '还没有已完成的任务' : '没有失败的任务'),
+                          title: _chip == 0 ? '暂无进行中或已暂停的任务' : (_chip == 1 ? '还没有已完成的任务' : '没有失败的任务'),
                           description: _chip == 0
-                              ? '上传或下载文件时会在这里实时显示进度'
+                              ? '上传或下载文件时会在这里实时显示进度；暂停会取消请求，继续将重新传输'
                               : '切换其他筛选查看对应任务',
                         ),
                       )
@@ -81,7 +99,8 @@ class _TransfersScreenState extends State<TransfersScreen> {
                     ],
                     if (_chip == 0 && done.isNotEmpty) ...<Widget>[
                       ProtoSectionHead(
-                        title: '今天已完成',
+                        // 记录已持久化，可能包含前几天的任务，不再写死「今天」。
+                        title: '最近完成',
                         more: '${done.length} 项',
                         moreIcon: Icons.chevron_right,
                         padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
@@ -167,16 +186,23 @@ class _TransferCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = LocalTransferStore.instance;
     final category = FileCategoryX.fromFileName(task.name);
+    // 只有本次 App 会话内发起的任务才持有真实 CancelToken 与重发闭包；
+    // 重启后恢复的历史记录不能重发，只提供「移除记录」。
+    final bool canRestart = store.canRestart(task.id);
+    final String direction =
+        task.direction == TransferDirection.upload ? '上传' : '下载';
     final statusMeta = switch (task.status) {
-      TransferStatus.running => '${task.direction == TransferDirection.upload ? '上传中' : '下载中'} · ${(task.progress * 100).toStringAsFixed(0)}%',
-      TransferStatus.paused => '已暂停 · ${(task.progress * 100).toStringAsFixed(0)}%',
+      TransferStatus.running => '$direction中 · ${(task.progress * 100).toStringAsFixed(0)}%',
+      // 暂停后请求已被取消，显示的百分比只是取消前的历史值，
+      // 明确告诉用户「继续会从头重传」，不伪装成可续传。
+      TransferStatus.paused => '已暂停 · 请求已取消（继续将重新开始）',
       TransferStatus.done => '传输完成',
       TransferStatus.failed => '传输失败',
     };
     final control = switch (task.status) {
       TransferStatus.running => Icons.pause,
-      TransferStatus.paused => Icons.play_arrow,
-      TransferStatus.failed => Icons.refresh,
+      TransferStatus.paused => canRestart ? Icons.play_arrow : Icons.close,
+      TransferStatus.failed => canRestart ? Icons.refresh : Icons.close,
       TransferStatus.done => Icons.close,
     };
     return Container(
@@ -212,13 +238,23 @@ class _TransferCard extends StatelessWidget {
                   switch (task.status) {
                     case TransferStatus.running:
                       store.pause(task.id);
-                      showQyToast(context, '已暂停');
+                      showQyToast(context, '已暂停，请求已取消');
                     case TransferStatus.paused:
+                      if (!canRestart) {
+                        store.remove(task.id);
+                        showQyToast(context, '已移除记录');
+                        return;
+                      }
                       store.resume(task.id);
-                      showQyToast(context, '已继续');
+                      showQyToast(context, '已重新发起$direction（从头开始）');
                     case TransferStatus.failed:
-                      store.resume(task.id);
-                      showQyToast(context, '已重新排队');
+                      if (!canRestart) {
+                        store.remove(task.id);
+                        showQyToast(context, '已移除记录');
+                        return;
+                      }
+                      store.retry(task.id);
+                      showQyToast(context, '已重新发起$direction');
                     case TransferStatus.done:
                       store.remove(task.id);
                       showQyToast(context, '已移除记录');
@@ -259,6 +295,25 @@ class _TransferCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
+          // 上传任务的源路径只在内存里；文件被删 / 想换一个文件时，
+          // 用真实的文件选择器重新发起，而不是假装「重试成功」。
+          if (canRestart &&
+              task.direction == TransferDirection.upload &&
+              (task.status == TransferStatus.failed ||
+                  task.status == TransferStatus.paused))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: QyTapScale(
+                  onTap: () => _rePickFile(context, task.id),
+                  child: const Text(
+                    '重新选择文件',
+                    style: TextStyle(fontSize: 10, color: QyColors.primary),
+                  ),
+                ),
+              ),
+            ),
           Row(
             children: <Widget>[
               Text.rich(
@@ -268,7 +323,9 @@ class _TransferCard extends StatelessWidget {
                     TextSpan(
                       text: task.status == TransferStatus.failed
                           ? '失败'
-                          : '${(task.progress * 100).toStringAsFixed(0)}%',
+                          : task.status == TransferStatus.paused
+                              ? '已暂停'
+                              : '${(task.progress * 100).toStringAsFixed(0)}%',
                       style: const TextStyle(fontWeight: FontWeight.w600, color: QyColors.primary),
                     ),
                   ],
@@ -276,11 +333,12 @@ class _TransferCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                task.status == TransferStatus.done
-                    ? '已完成'
-                    : task.status == TransferStatus.failed
-                        ? '可重试'
-                        : '进行中',
+                switch (task.status) {
+                  TransferStatus.done => '已完成',
+                  TransferStatus.failed => canRestart ? '可重试' : '可移除',
+                  TransferStatus.paused => canRestart ? '可继续' : '可移除',
+                  TransferStatus.running => '进行中',
+                },
                 style: const TextStyle(fontSize: 10, color: QyColors.muted),
               ),
             ],
@@ -288,6 +346,28 @@ class _TransferCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 重新选择文件并上传：选到新文件才移除旧记录，用户取消则原样保留。
+  Future<void> _rePickFile(BuildContext context, String oldTaskId) async {
+    try {
+      final CloudFile? file = await UploadHelper.pickAndUpload(
+        replaceTaskId: oldTaskId,
+      );
+      if (!context.mounted) return;
+      if (file == null) {
+        showQyToast(context, '已取消，原记录保留');
+        return;
+      }
+      showQyToast(context, '已重新上传 ${file.name}', success: true);
+    } on ApiException catch (error) {
+      if (error.isCancelled || !context.mounted) return;
+      showQyToast(context, '上传失败：${error.message}');
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack,
+          context: 'transfers_screen#repick');
+      if (context.mounted) showQyToast(context, '上传失败，请稍后重试');
+    }
   }
 }
 

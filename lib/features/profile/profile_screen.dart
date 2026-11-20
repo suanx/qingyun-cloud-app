@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
-
 import '../../core/models/cloud_models.dart';
 import '../../core/models/transfer_store.dart';
 import '../../core/network/cloud_repository.dart';
 import '../../core/router/app_router.dart';
+import '../../core/utils/error_reporter.dart';
 import '../../widgets/proto_widgets.dart';
 
 /// 04 我的（对齐 screen-mine）。
@@ -25,10 +25,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final Future<int> _shareCountFuture = _repo.shareCount();
   late final Future<int> _trashCountFuture = _repo.trashCount();
 
+  AccountStatus? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatus();
+  }
+
+  Future<void> _loadStatus() async {
+    try {
+      final status = await _repo.accountStatus();
+      if (!mounted) return;
+      setState(() => _status = status);
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'profile_screen#status');
+      // 加载失败时保留中性占位，不打断其它真实数据。
+    }
+  }
+
   Future<void> _logout() async {
     await _repo.logout();
     if (!mounted) return;
     context.go(AppRouter.login);
+  }
+
+  /// 打开会员管理页；返回后刷新账户状态（会员天数可能已变化）。
+  Future<void> _openAdminVip() async {
+    await context.push<bool>(AppRouter.adminVip);
+    // 不依赖返回值：点左上角、系统返回键都刷新，避免会员状态残留旧值。
+    await _loadStatus();
+  }
+
+  /// 安全中心（两步验证）；返回后刷新账户状态。
+  Future<void> _openSecurity() async {
+    await context.push<bool>(AppRouter.security);
+    if (mounted) await _loadStatus();
+  }
+
+  /// 登录设备 / 令牌管理；返回后刷新令牌计数。
+  Future<void> _openDevices() async {
+    await context.push<bool>(AppRouter.devices);
+    if (mounted) await _loadStatus();
+  }
+
+  /// 会员横幅「查看」：展示真实账户详情。
+  void _showAccountDetail() {
+    final status = _status;
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('账户与会员'),
+        content: status == null
+            ? const Text('账户信息加载中，请稍后重试')
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('账号：${status.username}'),
+                  const SizedBox(height: 6),
+                  Text('角色：${status.isAdmin ? '管理员' : '普通用户'}'),
+                  const SizedBox(height: 6),
+                  Text('会员：${status.vipTitle}'),
+                  if (status.everVip) ...<Widget>[
+                    const SizedBox(height: 6),
+                    Text('到期日：${status.vipExpiryLabel}'),
+                  ],
+                  const SizedBox(height: 6),
+                  Text(
+                      '存储账号：${status.storageConnected ? '已连接' : '未连接 / 连接异常'}'),
+                  const SizedBox(height: 6),
+                  Text('文件 ${status.fileCount} · 分享 ${status.shareCount} · '
+                      '回收站 ${status.trashCount} · 令牌 ${status.tokenCount}'),
+                ],
+              ),
+        actions: <Widget>[
+          if (status?.isAdmin ?? false)
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _openAdminVip();
+              },
+              child: const Text('管理会员'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -41,8 +127,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const _MeHero(),
-          _VipBanner(onTap: () => showQyToast(context, '轻云会员：2TB 空间 / 极速传输')),
+          _MeHero(status: _status, onSettings: _openSecurity),
+          _VipBanner(status: _status, onTap: _showAccountDetail),
           const SizedBox(height: 14),
           Expanded(
             child: ListView(
@@ -109,34 +195,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       iconColor: QyColors.amberDeep,
                       background: QyColors.amberSoft,
                       label: '设备管理',
-                      value: const Text('1 台', style: _cellValueStyle),
-                      onTap: () => showQyToast(context, '设备管理：当前设备在线'),
+                      value: Text(
+                        _status == null
+                            ? '—'
+                            : '${_status!.tokenCount} 个凭证',
+                        style: _cellValueStyle,
+                      ),
+                      onTap: _openDevices,
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 _MeBlock(
                   children: <Widget>[
+                    if (_status?.isAdmin ?? false)
+                      _MeCell(
+                        icon: Icons.admin_panel_settings,
+                        iconColor: QyColors.violetDeep,
+                        background: QyColors.violetSoft,
+                        label: '会员管理',
+                        value: const Text('仅管理员', style: _cellValueStyle),
+                        onTap: _openAdminVip,
+                      ),
                     _MeCell(
                       icon: Icons.verified_user,
                       iconColor: QyColors.violetDeep,
                       background: QyColors.violetSoft,
                       label: '安全中心',
-                      onTap: () => showQyToast(context, '安全中心'),
+                      value: Text(
+                        '两步验证 · 登录设备',
+                        style: _cellValueStyle,
+                      ),
+                      onTap: _openSecurity,
                     ),
                     _MeCell(
                       icon: Icons.help_outline,
                       iconColor: QyColors.sub,
                       background: QyColors.canvas,
                       label: '帮助与反馈',
-                      onTap: () => showQyToast(context, '帮助与反馈'),
+                      value: const Text('常见问题 · 提交反馈', style: _cellValueStyle),
+                      onTap: () => context.push(AppRouter.help),
                     ),
                     _MeCell(
                       icon: Icons.settings,
                       iconColor: QyColors.sub,
                       background: QyColors.canvas,
                       label: '设置',
-                      onTap: () => showQyToast(context, '设置'),
+                      value: const Text('服务地址 · 本地数据', style: _cellValueStyle),
+                      onTap: () => context.push(AppRouter.settings),
                     ),
                     _MeCell(
                       icon: Icons.logout,
@@ -177,10 +283,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 class _MeHero extends StatelessWidget {
-  const _MeHero();
+  const _MeHero({required this.status, required this.onSettings});
+
+  final AccountStatus? status;
+
+  /// 头图右上齿轮：进入安全中心（账户安全设置）。
+  final VoidCallback onSettings;
+
+  /// 数据未到 / 加载失败时用 — 占位，绝不显示编造数值。
+  static String _count(int? value) => value == null ? '—' : '$value';
 
   @override
   Widget build(BuildContext context) {
+    final s = status;
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 58, 18, 22),
       decoration: const BoxDecoration(
@@ -211,48 +326,65 @@ class _MeHero extends StatelessWidget {
                     BoxShadow(color: Color(0x802F6BFF), blurRadius: 18, offset: Offset(0, 8), spreadRadius: -6),
                   ],
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    '轻',
-                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600, color: QyColors.onDark),
+                    s == null || s.username.isEmpty
+                        ? '轻'
+                        : String.fromCharCode(s.username.runes.first).toUpperCase(),
+                    style: const TextStyle(
+                        fontSize: 21, fontWeight: FontWeight.w600, color: QyColors.onDark),
                   ),
                 ),
               ),
               const SizedBox(width: 13),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        Text('林小轻',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: QyColors.ink)),
-                        SizedBox(width: 7),
-                        _VipTag(),
+                        Flexible(
+                          child: Text(
+                            s?.displayName ?? '轻云用户',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: QyColors.ink),
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        _VipTag(label: s?.vipTagLabel ?? '未开通'),
                       ],
                     ),
-                    SizedBox(height: 5),
-                    Text('轻云号：qingyun_88',
-                        style: TextStyle(fontSize: 11, letterSpacing: 0.2, color: QyColors.heroLabel)),
+                    const SizedBox(height: 5),
+                    Text(
+                      s == null ? '轻云号：—' : '轻云号：${s.username}',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11, letterSpacing: 0.2, color: QyColors.heroLabel),
+                    ),
                   ],
                 ),
               ),
               ProtoIconButton(
                 icon: Icons.settings,
-                onTap: () => showQyToast(context, '设置'),
+                onTap: onSettings,
               ),
             ],
           ),
           const SizedBox(height: 16),
-          const Padding(
-            padding: EdgeInsets.only(left: 2),
+          Padding(
+            padding: const EdgeInsets.only(left: 2),
             child: Row(
               children: <Widget>[
-                _MeStat(value: '1,284', label: '文件'),
-                SizedBox(width: 26),
-                _MeStat(value: '6', label: '分享'),
-                SizedBox(width: 26),
-                _MeStat(value: '3', label: '设备'),
+                _MeStat(value: _count(s?.fileCount), label: '文件'),
+                const SizedBox(width: 26),
+                _MeStat(value: _count(s?.shareCount), label: '分享'),
+                const SizedBox(width: 26),
+                // 原「3 设备」是写死的假数值；lanflare 无设备表，
+                // 改用真实存在的 API 令牌数，语义对应「登录凭证」。
+                _MeStat(value: _count(s?.tokenCount), label: '令牌'),
               ],
             ),
           ),
@@ -263,7 +395,9 @@ class _MeHero extends StatelessWidget {
 }
 
 class _VipTag extends StatelessWidget {
-  const _VipTag();
+  const _VipTag({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -277,13 +411,13 @@ class _VipTag extends StatelessWidget {
           colors: <Color>[Color(0xFFFFD37A), Color(0xFFF5A623)],
         ),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.workspace_premium, size: 10, color: Color(0xFF7A4A00)),
-          SizedBox(width: 2),
-          Text('VIP',
-              style: TextStyle(
+          const Icon(Icons.workspace_premium, size: 10, color: Color(0xFF7A4A00)),
+          const SizedBox(width: 2),
+          Text(label,
+              style: const TextStyle(
                   fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: Color(0xFF7A4A00))),
         ],
       ),
@@ -310,8 +444,9 @@ class _MeStat extends StatelessWidget {
 }
 
 class _VipBanner extends StatelessWidget {
-  const _VipBanner({required this.onTap});
+  const _VipBanner({required this.status, required this.onTap});
 
+  final AccountStatus? status;
   final VoidCallback onTap;
 
   @override
@@ -347,16 +482,25 @@ class _VipBanner extends StatelessWidget {
                   children: <Widget>[
                     const Icon(Icons.workspace_premium, size: 26, color: Color(0xFFFFD37A)),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text('轻云会员 · 剩余 286 天',
-                              style: TextStyle(
-                                  fontSize: 13.5, fontWeight: FontWeight.w600, color: QyColors.onDark)),
-                          SizedBox(height: 3),
-                          Text('2TB 空间 · 不限速 · 30 天回收站',
-                              style: TextStyle(fontSize: 10.5, color: Color(0xFFB9C4DB))),
+                          Text(
+                            status?.vipTitle ?? '轻云会员',
+                            style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: QyColors.onDark),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            status?.vipSubtitle ?? '账户状态加载中',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 10.5, color: Color(0xFFB9C4DB)),
+                          ),
                         ],
                       ),
                     ),
@@ -370,7 +514,7 @@ class _VipBanner extends StatelessWidget {
                           colors: <Color>[Color(0xFFFFD37A), Color(0xFFF5A623)],
                         ),
                       ),
-                      child: const Text('续费',
+                      child: const Text('查看',
                           style: TextStyle(
                               fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF5A3600))),
                     ),

@@ -1,21 +1,19 @@
 import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
-
 import '../config/app_config.dart';
 import 'api_exception.dart';
 import 'token_store.dart';
 
-/// 统一 HTTP 客户端（对接 lanflare，同时保留原 envelop 解析能力）。
+/// 统一 HTTP 客户端（对接 lanflare 原生 JSON）。
 ///
 /// - 自动拼接 [AppConfig.apiBaseUrl]
 /// - 按凭证类型自动附加鉴权头：
-///   - `lf_...` → `Authorization: Bearer <token>`
-///   - `basic:<b64>` → `Authorization: Basic <b64>`
-///   - 其他 → `Cookie: lf_session=<value>`（旧式会话兜底）
-/// - `getRaw/postRaw/...`：lanflare 原生 JSON（成功直接返回 body，
-///   失败 `{ "error": ... }` 映射为 [ApiException]）
-/// - `get/post/...`：保留原 envelop `{code,message,data}` 解析（演示页使用）
+///   - `lf_...` → `Authorization: Bearer <token>`（登录默认）
+///   - 其他 → `Cookie: lf_session=<value>`（令牌换发失败时的降级会话）
+///   - `basic:<b64>` → `Authorization: Basic <b64>`（仅兼容历史版本旧凭证）
+/// - `getRaw/postRaw/...`：成功直接返回 body，
+///   失败 `{ "error": ... }` 与 HTTP 4xx/5xx 统一映射为 [ApiException]
+/// - `raw`：暴露原始 Dio 请求（登录等需读取原始响应的场景）
 class ApiClient {
   ApiClient({String? baseUrl, Dio? dioOverride})
       : _dio = dioOverride ??
@@ -27,7 +25,13 @@ class ApiClient {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
               },
-            )) {
+            )),
+        // 公开能力 URL（/api/preview 由 HMAC 自校验）专用客户端：
+        // 不挂拦截器，绝不把 Bearer 令牌 / 会话 Cookie 发到该端点。
+        _capabilityDio = Dio(BaseOptions(
+          connectTimeout: AppConfig.connectTimeout,
+          receiveTimeout: AppConfig.receiveTimeout,
+        )) {
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         final credential = TokenStore.credential;
@@ -47,22 +51,40 @@ class ApiClient {
 
   final Dio _dio;
 
-  /// 全局共享实例（示例工程从简；正式迭代可改为依赖注入）。
+  /// 不带任何登录凭证的客户端，仅用于后端签发的公开能力 URL。
+  final Dio _capabilityDio;
+
+  /// 当前生效的后端基地址（设置页可读取展示）。
+  String get baseUrl => _dio.options.baseUrl;
+
+  /// 运行时切换服务地址：用于自建 VPS；修改后立即对后续请求生效。
+  /// 规范化由 `SettingsStore.normalizeBaseUrl()` 负责，这里只去掉多余尾斜杠。
+  set baseUrl(String value) {
+    String normalized = value.trim();
+    while (normalized.endsWith('/') && normalized.length > 1) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+    _dio.options.baseUrl = normalized;
+  }
+
+  /// 全局共享实例（后续可改为依赖注入）。
   static final ApiClient shared = ApiClient();
 
   /// 登录态失效回调（HTTP 401 时触发一次）。
-  /// 由路由层设置：清除凭证并跳转登录页。
-  static void Function()? onUnauthorized;
+  /// 由路由层设置：等待凭证清除完成后再跳转登录页。
+  static Future<void> Function()? onUnauthorized;
 
   static void _notifyUnauthorized() {
     final callback = onUnauthorized;
     if (callback != null) {
-      Future<void>.microtask(callback);
+      Future<void>.microtask(() async {
+        await callback();
+      });
     }
   }
 
   // ---------------------------------------------------------------------------
-  // lanflare 原生 JSON（无 envelop）
+  // lanflare 原生 JSON
   // ---------------------------------------------------------------------------
 
   Future<dynamic> getRaw(String path, {Map<String, dynamic>? query}) async {
@@ -79,6 +101,13 @@ class ApiClient {
   Future<dynamic> deleteRaw(String path, {Object? body}) async {
     final response =
         await _guard(() => _dio.delete<dynamic>(path, data: body));
+    return _unwrapPlain(response);
+  }
+
+  /// PATCH（lanflare `PATCH /api/tokens/:id` 重命名设备）。
+  Future<dynamic> patchRaw(String path, {Object? body}) async {
+    final response =
+        await _guard(() => _dio.patch<dynamic>(path, data: body));
     return _unwrapPlain(response);
   }
 
@@ -113,14 +142,45 @@ class ApiClient {
     String savePath, {
     Map<String, dynamic>? query,
     void Function(int received, int total)? onReceiveProgress,
+    CancelToken? cancelToken,
   }) async {
     await _guard(() => _dio.download(
           path,
           savePath,
           queryParameters: query,
           onReceiveProgress: onReceiveProgress,
+          cancelToken: cancelToken,
           options: Options(followRedirects: true),
         ));
+  }
+
+  /// 从后端签发的「能力 URL」把内容下载到本地文件。
+  ///
+  /// `/api/preview?id=&uid=&exp=&sig=` 由路由内 HMAC 自校验，属于公开端点：
+  /// 这里刻意使用 [_capabilityDio]（无拦截器），避免把 Bearer 令牌 / 会话
+  /// Cookie 发到该 URL；同时只接受 http/https 绝对地址且必须有 host，
+  /// 不接收任意 scheme 或本地路径。供 PDF 内联预览取本地文件使用。
+  Future<void> downloadCapabilityUrl(
+    String url,
+    String savePath, {
+    void Function(int received, int total)? onReceiveProgress,
+  }) async {
+    final Uri? uri = Uri.tryParse(url);
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty) {
+      throw ApiException.unknown('预览地址无效');
+    }
+    try {
+      await _capabilityDio.download(
+        url,
+        savePath,
+        onReceiveProgress: onReceiveProgress,
+        options: Options(followRedirects: true),
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
   }
 
   /// 上传原始字节流（lanflare /api/upload：raw body + `X-Heri-Name` 头）。
@@ -130,6 +190,7 @@ class ApiClient {
     required int length,
     Map<String, String> headers = const <String, String>{},
     void Function(int sent, int total)? onSendProgress,
+    CancelToken? cancelToken,
   }) async {
     final response = await _guard(() => _dio.post<dynamic>(
           path,
@@ -142,35 +203,12 @@ class ApiClient {
             contentType: 'application/octet-stream',
           ),
           onSendProgress: onSendProgress,
+          cancelToken: cancelToken,
         ));
     return _unwrapPlain(response);
   }
 
-  // ---------------------------------------------------------------------------
-  // 原 envelop 约定（`{code, message, data}`，功能演示页仍在使用）
-  // ---------------------------------------------------------------------------
-
-  Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
-    final response = await _guard(() => _dio.get<dynamic>(path, queryParameters: query));
-    return _unwrap(response);
-  }
-
-  Future<dynamic> post(String path, {Object? body}) async {
-    final response = await _guard(() => _dio.post<dynamic>(path, data: body));
-    return _unwrap(response);
-  }
-
-  Future<dynamic> put(String path, {Object? body}) async {
-    final response = await _guard(() => _dio.put<dynamic>(path, data: body));
-    return _unwrap(response);
-  }
-
-  Future<dynamic> delete(String path, {Object? body}) async {
-    final response = await _guard(() => _dio.delete<dynamic>(path, data: body));
-    return _unwrap(response);
-  }
-
-  /// 直接暴露原始请求能力（特殊场景）。
+  /// 直接暴露原始请求能力（登录等需读取原始响应的场景）。
   Future<Response<T>> raw<T>(Future<Response<T>> Function(Dio dio) send) =>
       _guard(() => send(_dio));
 
@@ -208,23 +246,6 @@ class ApiClient {
       if (error is String && error.isNotEmpty) return error;
     }
     return _httpMessage(statusCode);
-  }
-
-  dynamic _unwrap(Response<dynamic> response) {
-    final data = response.data;
-    if (data is! Map<String, dynamic>) {
-      return data;
-    }
-    final code = data['code'];
-    final message = data['message'];
-    if (code is num && code != 0) {
-      throw ApiException(
-        code: code.toInt(),
-        message: message is String && message.isNotEmpty ? message : '请求失败（code=$code）',
-        statusCode: response.statusCode,
-      );
-    }
-    return data['data'];
   }
 
   ApiException _toApiException(DioException error) {

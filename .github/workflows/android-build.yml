@@ -29,7 +29,14 @@ jobs:
           cache: true
 
       - name: Pub get
-        run: flutter pub get
+        run: |
+          if [ -f pubspec.lock ]; then
+            flutter pub get
+            git diff --exit-code -- pubspec.lock
+          else
+            flutter pub get
+            echo "::warning::缺少 pubspec.lock，构建不可复现；请在本地用 Flutter 3.24.5 执行 flutter pub get 并提交"
+          fi
 
       - name: Analyze
         run: flutter analyze

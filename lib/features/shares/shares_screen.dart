@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
-
 import '../../core/models/cloud_models.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/cloud_repository.dart';
 import '../../widgets/proto_widgets.dart';
+import '../../core/config/admin_gate.dart';
 
 /// 我的分享：后端 GET /api/my-shares + DELETE /api/shares/:id。
 class SharesScreen extends StatefulWidget {
@@ -130,9 +130,11 @@ class _SharesScreenState extends State<SharesScreen> {
                           ].join(' · '),
                           style: const TextStyle(fontSize: 11, color: QyColors.muted),
                         ),
-                        trailing: TextButton(
-                          onPressed: () => _revoke(item),
-                          child: const Text('撤销', style: TextStyle(fontSize: 11)),
+                        trailing: AdminOnly(
+                          child: TextButton(
+                            onPressed: () => _revoke(item),
+                            child: const Text('撤销', style: TextStyle(fontSize: 11)),
+                          ),
                         ),
                       ),
                     ),

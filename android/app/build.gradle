@@ -15,6 +15,21 @@ if (localPropertiesFile.exists()) {
 def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
 def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
 
+// 正式签名配置：由 android/key.properties 提供（CI 从 Actions Secrets 生成）。
+// 该文件与 keystore 均已 gitignore，绝不入库。
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withReader("UTF-8") { reader ->
+        keystoreProperties.load(reader)
+    }
+}
+def hasReleaseKeystore = keystorePropertiesFile.exists() &&
+        keystoreProperties.getProperty("storeFile") &&
+        keystoreProperties.getProperty("storePassword") &&
+        keystoreProperties.getProperty("keyAlias") &&
+        keystoreProperties.getProperty("keyPassword")
+
 android {
     namespace = "com.qingyun.app"
     compileSdk = 34
@@ -31,18 +46,33 @@ android {
 
     defaultConfig {
         applicationId = "com.qingyun.app"
-        // flutter_svg / go_router / dio 均无更高 minSdk 要求
         minSdk = 21
         targetSdk = 34
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            release {
+                storeFile file(keystoreProperties.getProperty("storeFile"))
+                storePassword keystoreProperties.getProperty("storePassword")
+                keyAlias keystoreProperties.getProperty("keyAlias")
+                keyPassword keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // CI 出包阶段先使用 debug 签名，保证工作流可复现。
-            // 正式上架前请按 docs/BUILD.md「签名配置」替换为 release keystore。
-            signingConfig = signingConfigs.debug
+            if (hasReleaseKeystore) {
+                // 有正式 keystore：产物可分发、可上架。
+                signingConfig = signingConfigs.release
+            } else {
+                // 无正式 keystore：仅供本地 / CI 内部测试。
+                // release 工作流会硬校验签名 Secrets，缺失即拒绝发版。
+                signingConfig = signingConfigs.debug
+            }
             minifyEnabled = false
             shrinkResources = false
         }

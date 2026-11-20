@@ -1,12 +1,14 @@
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
-
 import '../../core/models/cloud_models.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/router/app_router.dart';
+import '../../core/utils/error_reporter.dart';
 import '../../widgets/proto_widgets.dart';
+import '../../core/config/admin_gate.dart';
 
 /// 06 存储空间（对齐 screen-storage）。占比来自 lanflare 容量概览。
 class StorageScreen extends StatefulWidget {
@@ -19,6 +21,9 @@ class StorageScreen extends StatefulWidget {
 class _StorageScreenState extends State<StorageScreen> {
   final CloudRepository _repo = CloudRepository();
   StorageSummary? _summary;
+  StorageAnalysis? _analysis;
+  bool _analyzing = true;
+  bool _cleaning = false;
 
   @override
   void initState() {
@@ -31,8 +36,134 @@ class _StorageScreenState extends State<StorageScreen> {
       final summary = await _repo.storageSummary();
       if (!mounted) return;
       setState(() => _summary = summary);
-    } catch (_) {
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'storage_screen#1');
       // 加载失败时保持占位展示。
+    }
+    await _loadAnalysis();
+  }
+
+  Future<void> _loadAnalysis() async {
+    if (mounted) setState(() => _analyzing = true);
+    try {
+      final analysis = await _repo.storageAnalysis();
+      if (!mounted) return;
+      setState(() {
+        _analysis = analysis;
+        _analyzing = false;
+      });
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'storage_screen#analysis');
+      if (!mounted) return;
+      setState(() {
+        _analysis = null;
+        _analyzing = false;
+      });
+    }
+  }
+
+  /// 「管理」：展示管理员全局账号池的真实状态。
+  ///
+  /// 账号由管理员在网页端统一配置，App 不提供绑定 / 解绑入口；这里只读取
+  /// `GET /api/status` 的 storage_pool 概览，不编造任何数值。
+  Future<void> _openAccount() async {
+    try {
+      final status = await _repo.accountStatus();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext ctx) => AlertDialog(
+          title: const Text('存储账号池'),
+          content: Text(
+            '账号总数：${status.poolAccounts}\n'
+            '自动上传池：${status.autoAccounts} 个蓝奏账号\n'
+            '均衡模式：${status.balanceModeLabel}\n'
+            '当前生效：${status.effectiveModeLabel}\n\n'
+            '${status.legacyFallback ? '当前为旧绑定兼容模式，请管理员在网页端配置账号池。' : '账号由管理员在网页端统一管理，App 不提供绑定入口。'}',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('知道了'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      // 状态读取失败不阻断页面；不显示假数据。
+    }
+    if (mounted) await _load();
+  }
+
+  /// 「查看会员」：admin 直达会员管理页，普通用户展示真实会员状态。
+  /// 不接支付渠道。
+  Future<void> _openMembership() async {
+    try {
+      final status = await _repo.accountStatus();
+      if (!mounted) return;
+      if (status.isAdmin) {
+        await context.push<bool>(AppRouter.adminVip);
+        await _load();
+      } else {
+        showQyToast(context, status.vipSubtitle);
+      }
+    } on ApiException catch (error) {
+      if (mounted) showQyToast(context, error.message, success: false);
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'storage_screen#membership');
+      if (mounted) {
+        showQyToast(context, '账户状态获取失败', success: false);
+      }
+    }
+  }
+
+  Future<void> _clean() async {
+    final ids = _analysis?.allItemIds ?? const <int>[];
+    if (ids.isEmpty || _cleaning) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('清理这些项目？'),
+        content: Text(
+          '共 ${ids.length} 项，预计释放 '
+          '${CloudRepository.humanSize(_analysis?.totalReclaimableBytes ?? 0)}。\n'
+          '文件会移入回收站，可随时恢复。',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('确认清理'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _cleaning = true);
+    try {
+      final result = await _repo.cleanStorage(ids);
+      if (!mounted) return;
+      showQyToast(
+        context,
+        '已清理 ${result.count} 项，释放 '
+        '${CloudRepository.humanSize(result.freedBytes)}',
+        success: true,
+      );
+      await _load();
+    } on ApiException catch (error) {
+      if (mounted) showQyToast(context, error.message, success: false);
+      // 建议集合已变化（409 等）时刷新，避免用户对着过期数据反复点。
+      await _loadAnalysis();
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'storage_screen#clean');
+      if (mounted) {
+        showQyToast(context, '清理失败，请稍后重试', success: false);
+      }
+    } finally {
+      if (mounted) setState(() => _cleaning = false);
     }
   }
 
@@ -52,7 +183,7 @@ class _StorageScreenState extends State<StorageScreen> {
             ),
             actions: <Widget>[
               QyTapScale(
-                onTap: () => showQyToast(context, '空间管理'),
+                onTap: _openAccount,
                 child: const Text('管理', style: ProtoText.sectionMore),
               ),
             ],
@@ -60,8 +191,13 @@ class _StorageScreenState extends State<StorageScreen> {
           const SizedBox(height: 8),
           _Donut(summary: _summary),
           _LegendGrid(byCategory: _summary?.byCategory),
-          const _CleanCard(),
-          const _UpgradeCard(),
+          _CleanCard(
+            analysis: _analysis,
+            analyzing: _analyzing,
+            cleaning: _cleaning,
+            onClean: _clean,
+          ),
+          _UpgradeCard(onTap: _openMembership),
           const ProtoFootNote('空间每 5 分钟同步一次',
               padding: EdgeInsets.fromLTRB(0, 4, 0, 10)),
         ],
@@ -268,10 +404,43 @@ class _LegendItem extends StatelessWidget {
 }
 
 class _CleanCard extends StatelessWidget {
-  const _CleanCard();
+  const _CleanCard({
+    required this.analysis,
+    required this.analyzing,
+    required this.cleaning,
+    required this.onClean,
+  });
+
+  final StorageAnalysis? analysis;
+  final bool analyzing;
+  final bool cleaning;
+  final Future<void> Function() onClean;
+
+  String _rowLabel(String fallback, String key, StorageAnalysis? data) {
+    final group = data?.group(key);
+    if (group == null || group.count <= 0) return fallback;
+    return '${group.label} · ${group.count} 项';
+  }
+
+  String _rowSize(String key, StorageAnalysis? data) {
+    final group = data?.group(key);
+    if (group == null || group.count <= 0 || group.sizeBytes <= 0) return '—';
+    return CloudRepository.humanSize(group.sizeBytes);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final data = analysis;
+    final ids = data?.allItemIds ?? const <int>[];
+    final canClean = !cleaning && !analyzing && ids.isNotEmpty;
+    final title = analyzing
+        ? '正在分析空间…'
+        : (data == null || data.isEmpty)
+            ? '暂无清理建议'
+            : '为你找到 ${CloudRepository.humanSize(data.totalReclaimableBytes)} 可清理';
+    final buttonLabel =
+        cleaning ? '清理中…' : (ids.isEmpty ? '暂无可清理项' : '一键清理');
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(15),
@@ -283,39 +452,65 @@ class _CleanCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Row(
+          Row(
             children: <Widget>[
-              Icon(Icons.auto_awesome, size: 19, color: QyColors.mint),
-              SizedBox(width: 9),
-              Text('为你找到 4.6 GB 可清理',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: QyColors.ink)),
-              Spacer(),
-              Text('智能整理', style: ProtoText.label105),
+              const Icon(Icons.auto_awesome, size: 19, color: QyColors.mint),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(title,
+                    style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: QyColors.ink)),
+              ),
+              const Text('智能整理', style: ProtoText.label105),
             ],
           ),
           const SizedBox(height: 12),
-          const _CleanRow(label: '重复照片 218 张', size: '1.8 GB'),
-          const _CleanRow(label: '超过 100MB 的大文件', size: '2.1 GB'),
-          const _CleanRow(label: '空文件夹 12 个', size: '0.7 GB'),
+          _CleanRow(
+            label: _rowLabel('重复文件', 'duplicate', data),
+            size: _rowSize('duplicate', data),
+          ),
+          _CleanRow(
+            label: _rowLabel('大文件', 'large', data),
+            size: _rowSize('large', data),
+          ),
+          _CleanRow(
+            label: _rowLabel('空文件夹', 'empty_dir', data),
+            size: _rowSize('empty_dir', data),
+          ),
           const SizedBox(height: 10),
-          QyTapScale(
-            onTap: () => showQyToast(context, '正在清理 4.6 GB 空间…'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-                gradient: LinearGradient(
-                  begin: Alignment(-0.5, -0.87),
-                  end: Alignment(0.5, 0.87),
-                  colors: <Color>[Color(0xFF3C7CFF), QyColors.primary],
-                ),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(color: Color(0xB32F6BFF), blurRadius: 18, offset: Offset(0, 8), spreadRadius: -8),
-                ],
+          // 清理是写操作：普通用户不渲染按钮，也不留「点了没反应」的假入口。
+          AdminOnly(
+            fallback: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                '清理建议仅管理员可执行',
+                style: TextStyle(fontSize: 12.5, color: QyColors.muted),
               ),
-              child: const Center(
-                child: Text('一键清理',
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: QyColors.onDark)),
+            ),
+            child: QyTapScale(
+              onTap: canClean ? () { onClean(); } : () {},
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  gradient: LinearGradient(
+                    begin: Alignment(-0.5, -0.87),
+                    end: Alignment(0.5, 0.87),
+                    colors: <Color>[Color(0xFF3C7CFF), QyColors.primary],
+                  ),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(color: Color(0xB32F6BFF), blurRadius: 18, offset: Offset(0, 8), spreadRadius: -8),
+                  ],
+                ),
+                child: Center(
+                  child: Text(buttonLabel,
+                      style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: QyColors.onDark)),
+                ),
               ),
             ),
           ),
@@ -350,7 +545,9 @@ class _CleanRow extends StatelessWidget {
 }
 
 class _UpgradeCard extends StatelessWidget {
-  const _UpgradeCard();
+  const _UpgradeCard({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -369,15 +566,15 @@ class _UpgradeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('升级至 2TB',
+                Text('会员服务',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: QyColors.ink)),
                 SizedBox(height: 3),
-                Text('首年 ¥168，含不限速传输', style: ProtoText.label105),
+                Text('查看会员状态与权益', style: ProtoText.label105),
               ],
             ),
           ),
           QyTapScale(
-            onTap: () => showQyToast(context, '开通轻云会员'),
+            onTap: onTap,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: const BoxDecoration(
@@ -391,7 +588,7 @@ class _UpgradeCard extends StatelessWidget {
                   BoxShadow(color: Color(0x472F6BFF), blurRadius: 10, offset: Offset(0, 4)),
                 ],
               ),
-              child: const Text('立即开通',
+              child: const Text('查看会员',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: QyColors.onDark)),
             ),
           ),

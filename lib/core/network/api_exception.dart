@@ -1,10 +1,7 @@
 /// 统一业务异常。
 ///
-/// 后端响应采用统一 envelop：
-/// ```json
-/// { "code": 0, "message": "ok", "data": { } }
-/// ```
-/// `code == 0` 表示成功；非 0 抛出 [ApiException]。
+/// lanflare 返回原生 JSON，业务失败 `{ "error": "..." }` 与 HTTP 4xx/5xx
+/// 均由 `ApiClient` 映射为 `ApiException`，页面只需处理本类型。
 class ApiException implements Exception {
   const ApiException({
     required this.code,
@@ -12,7 +9,7 @@ class ApiException implements Exception {
     this.statusCode,
   });
 
-  /// 业务错误码（后端 envelop.code），网络层本地错误使用负数。
+  /// 错误码：HTTP 状态码 × 100，网络层本地错误使用负数。
   final int code;
 
   /// 用户可读的错误信息。
@@ -20,12 +17,6 @@ class ApiException implements Exception {
 
   /// HTTP 状态码（仅当存在 HTTP 响应时提供）。
   final int? statusCode;
-
-  /// 登录态失效（后端约定：401 或业务码 40100）。
-  bool get isUnauthorized => statusCode == 401 || code == 40100;
-
-  /// 服务端错误（5xx 或业务码 >= 50000）。
-  bool get isServerError => (statusCode != null && statusCode! >= 500) || code >= 50000;
 
   factory ApiException.network() =>
       const ApiException(code: -1, message: '网络连接不可用，请检查网络后重试');
@@ -41,6 +32,11 @@ class ApiException implements Exception {
 
   factory ApiException.unknown(String message) =>
       ApiException(code: -99, message: message);
+
+  /// 本地主动取消（用户暂停 / 取消传输），不是网络或服务端失败。
+  static const int cancelledCode = -3;
+
+  bool get isCancelled => code == cancelledCode;
 
   @override
   String toString() => 'ApiException($code, $message${statusCode == null ? '' : ', http:$statusCode'})';

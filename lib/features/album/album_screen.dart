@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
-
 import '../../core/models/cloud_models.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/router/app_router.dart';
+import '../../core/utils/error_reporter.dart';
 import '../../widgets/proto_widgets.dart';
 
 /// 08 相册：数据来自 lanflare 图片分类文件，点击进入真实在线预览。
-/// 回忆视频属于运营能力（后端无对应算法接口），保留展示但标注为示例。
+/// 「我的照片回忆」横幅已由 `GET /api/recall/album` 真实实现：显示真实照片数并
+/// 进入照片轮播页（方案 A，零视频生成）；首页推荐卡另由 `/api/recall/daily` 提供。
 class AlbumScreen extends StatefulWidget {
   const AlbumScreen({super.key});
 
@@ -19,6 +21,40 @@ class _AlbumScreenState extends State<AlbumScreen> {
   final CloudRepository _repo = CloudRepository();
   late final Future<List<CloudFile>> _photosFuture =
       _repo.files(category: FileCategory.image);
+
+  RecallAlbum? _album;
+  bool _albumLoading = true;
+  bool _albumFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAlbum();
+  }
+
+  Future<void> _loadAlbum() async {
+    if (mounted) {
+      setState(() {
+        _albumLoading = true;
+        _albumFailed = false;
+      });
+    }
+    try {
+      final RecallAlbum album = await _repo.recallAlbum();
+      if (!mounted) return;
+      setState(() {
+        _album = album;
+        _albumLoading = false;
+      });
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'album_screen#recall');
+      if (!mounted) return;
+      setState(() {
+        _albumLoading = false;
+        _albumFailed = true;
+      });
+    }
+  }
 
   static const List<List<Color>> _palette = <List<Color>>[
     <Color>[Color(0xFF4C8DFF), Color(0xFF8FC0FF)],
@@ -45,7 +81,13 @@ class _AlbumScreenState extends State<AlbumScreen> {
               onTap: () => context.go(QyRoutes.files),
             ),
           ),
-          const _MemoryBanner(),
+          _MemoryBanner(
+            album: _album,
+            loading: _albumLoading,
+            failed: _albumFailed,
+            onRetry: () => _loadAlbum(),
+            onOpen: () => context.push(AppRouter.recallAlbum),
+          ),
           const _AlbumHead(title: '全部照片'),
           FutureBuilder<List<CloudFile>>(
             future: _photosFuture,
@@ -91,56 +133,84 @@ class _AlbumScreenState extends State<AlbumScreen> {
 }
 
 class _MemoryBanner extends StatelessWidget {
-  const _MemoryBanner();
+  const _MemoryBanner({
+    required this.album,
+    required this.loading,
+    required this.failed,
+    required this.onRetry,
+    required this.onOpen,
+  });
+
+  final RecallAlbum? album;
+  final bool loading;
+  final bool failed;
+  final VoidCallback onRetry;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
+    final String subtitle;
+    if (loading) {
+      subtitle = '正在整理回忆…';
+    } else if (failed) {
+      subtitle = '回忆暂时无法加载 · 点击重试';
+    } else if (album == null || !album!.hasPhotos) {
+      subtitle = '上传照片后会在这里生成回忆';
+    } else {
+      subtitle = album!.summary;
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-        child: Container(
-          height: 112,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment(-0.64, -0.77),
-              end: Alignment(0.64, 0.77),
-              colors: <Color>[QyColors.primary, Color(0xFF5AA9FF), Color(0xFF37C9B4)],
-            ),
-          ),
-          child: const Stack(
-            children: <Widget>[
-              Positioned(
-                right: 16,
-                bottom: 14,
-                child: Icon(Icons.play_circle_filled, size: 26, color: QyColors.onDark),
+      child: QyTapScale(
+        onTap: failed ? onRetry : onOpen,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          child: Container(
+            height: 112,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment(-0.64, -0.77),
+                end: Alignment(0.64, 0.77),
+                colors: <Color>[QyColors.primary, Color(0xFF5AA9FF), Color(0xFF37C9B4)],
               ),
-              Padding(
-                padding: EdgeInsets.all(14),
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        '我的照片回忆',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: QyColors.onDark,
+            ),
+            child: Stack(
+              children: <Widget>[
+                const Positioned(
+                  right: 16,
+                  bottom: 14,
+                  child: Icon(Icons.play_circle_filled, size: 26, color: QyColors.onDark),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Text(
+                          '我的照片回忆',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: QyColors.onDark,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        '示例内容 · 暂未接入回忆生成服务',
-                        style: TextStyle(fontSize: 11, color: Color(0xCCFFFFFF)),
-                      ),
-                    ],
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: Color(0xCCFFFFFF)),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

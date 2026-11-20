@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qingyun_ui_kit/qingyun_ui_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../core/config/settings_store.dart';
 import '../../core/models/cloud_models.dart';
+import '../../core/models/transfer_store.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/cloud_repository.dart';
+import '../../core/utils/error_reporter.dart';
 import '../../widgets/proto_widgets.dart';
 
-/// 05 搜索（对齐 screen-search）。关键字实时走 lanflare `/api/search`。
+/// 05 搜索（对齐 screen-search）。
+///
+/// - 关键字搜索走 lanflare `GET /api/search?q=`（仅文件名匹配）。
+/// - 「快捷筛选」计数与「最近文件」取自 `GET /api/stats/quick` 的真实统计。
+/// - 「传输记录」取本地 `LocalTransferStore` 的真实运行中任务数。
+/// 全页无任何写死数值、编造热搜或假徽章。
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -20,24 +27,52 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   final CloudRepository _repo = CloudRepository();
 
-  static const String _historyKey = 'qingyun_search_history';
-
   List<String> _history = <String>[];
 
   bool _searching = false;
   String _query = '';
   List<CloudFile> _results = <CloudFile>[];
 
+  /// 快捷筛选 / 最近文件的真实统计（lanflare GET /api/stats/quick）。
+  /// 失败时保持 null，页面显示中性文案，不回退到任何编造数值。
+  QuickStats? _stats;
+  bool _statsLoading = true;
+
   @override
   void initState() {
     super.initState();
     _loadHistory();
+    _loadStats();
+    // 传输任务数来自本地真实任务模型；任务状态变化时刷新该数字。
+    LocalTransferStore.instance.addListener(_onTransferChanged);
+  }
+
+  void _onTransferChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final stats = await _repo.quickStats();
+      if (!mounted) return;
+      setState(() {
+        _stats = stats;
+        _statsLoading = false;
+      });
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'search_screen#stats');
+      if (!mounted) return;
+      setState(() {
+        _stats = null;
+        _statsLoading = false;
+      });
+    }
   }
 
   Future<void> _loadHistory() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-    setState(() => _history = prefs.getStringList(_historyKey) ?? <String>[]);
+    setState(() => _history = prefs.getStringList(SettingsStore.searchHistoryKey) ?? <String>[]);
   }
 
   Future<void> _addHistory(String query) async {
@@ -46,13 +81,13 @@ class _SearchScreenState extends State<SearchScreen> {
       query,
       ..._history.where((String item) => item != query),
     ].take(8).toList();
-    await prefs.setStringList(_historyKey, updated);
+    await prefs.setStringList(SettingsStore.searchHistoryKey, updated);
     if (mounted) setState(() => _history = updated);
   }
 
   Future<void> _clearHistory() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_historyKey);
+    await prefs.remove(SettingsStore.searchHistoryKey);
     if (!mounted) return;
     setState(() => _history = <String>[]);
     showQyToast(context, '搜索历史已清空', success: true);
@@ -60,6 +95,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   void dispose() {
+    LocalTransferStore.instance.removeListener(_onTransferChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -87,7 +123,8 @@ class _SearchScreenState extends State<SearchScreen> {
         _searching = false;
       });
       showQyToast(context, error.message, success: false);
-    } catch (_) {
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'search_screen#1');
       if (!mounted) return;
       setState(() {
         _results = const <CloudFile>[];
@@ -147,44 +184,13 @@ class _SearchScreenState extends State<SearchScreen> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(18, 22, 18, 12),
-              child: Text('热门搜索',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: QyColors.heroLabel)),
-            ),
-            _HotRow(
-              rank: '1',
-              top: true,
-              text: '2026 年度总结',
-              badge: '热',
-              badgeNew: false,
-              onTap: () => _search('2026 年度总结'),
-            ),
-            _HotRow(
-              rank: '2',
-              top: true,
-              text: '旅行照片',
-              badge: '新',
-              badgeNew: true,
-              onTap: () => _search('旅行照片'),
-            ),
-            _HotRow(
-              rank: '3',
-              top: true,
-              text: '项目排期表',
-              onTap: () => _search('项目排期表'),
-            ),
-            _HotRow(
-              rank: '4',
-              top: false,
-              text: '发票扫描件',
-              onTap: () => _search('发票'),
-            ),
-            _HotRow(
-              rank: '5',
-              top: false,
-              text: '证件备份',
-              onTap: () => _search('证件'),
+            _RecentSection(
+              stats: _stats,
+              loading: _statsLoading,
+              onRetry: () {
+                _loadStats();
+              },
+              onTapFile: (RecentFile file) => _search(file.searchTerm),
             ),
             const Padding(
               padding: EdgeInsets.fromLTRB(18, 20, 18, 0),
@@ -195,21 +201,33 @@ class _SearchScreenState extends State<SearchScreen> {
             _ResultHint(
               icon: Icons.image,
               prefix: '图片 · ',
-              bold: '1,284',
-              suffix: ' 个文件，按拍摄地点聚合',
+              bold: _statsLoading
+                  ? '—'
+                  : (_stats == null ? '?' : '${_stats!.counts.image}'),
+              suffix: _statsLoading
+                  ? ' 个文件 · 统计加载中'
+                  : (_stats == null
+                      ? ' 个文件 · 统计不可用'
+                      : ' 个文件 · 查看全部图片'),
               onTap: () => context.go(QyRoutes.album),
             ),
             _ResultHint(
               icon: Icons.description,
               prefix: '文档 · ',
-              bold: '96',
-              suffix: ' 个文件，最近更新于今天',
+              bold: _statsLoading
+                  ? '—'
+                  : (_stats == null ? '?' : '${_stats!.counts.doc}'),
+              suffix: _statsLoading
+                  ? ' 个文件 · 统计加载中'
+                  : (_stats == null
+                      ? ' 个文件 · 统计不可用'
+                      : ' 个文件 · 最近更新 ${_stats!.recentUpdatedLabel}'),
               onTap: () => context.go(QyRoutes.files),
             ),
             _ResultHint(
               icon: Icons.swap_vert,
               prefix: '传输记录 · ',
-              bold: '3',
+              bold: '${LocalTransferStore.instance.running.length}',
               suffix: ' 个任务进行中',
               onTap: () => context.go(QyRoutes.transfers),
             ),
@@ -260,7 +278,7 @@ class _SearchBar extends StatelessWidget {
                       decoration: const InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
-                        hintText: '搜索文件名 / 内容',
+                        hintText: '搜索文件名',
                         hintStyle: TextStyle(fontSize: 14, color: Color(0xFFA9B4C6)),
                       ),
                       style: const TextStyle(fontSize: 14, color: QyColors.ink),
@@ -366,64 +384,123 @@ class _Tag extends StatelessWidget {
   }
 }
 
-class _HotRow extends StatelessWidget {
-  const _HotRow({
-    required this.rank,
-    required this.top,
-    required this.text,
-    required this.onTap,
-    this.badge,
-    this.badgeNew = false,
+/// 「最近文件」区：数据全部来自 `GET /api/stats/quick` 的 recent_files。
+///
+/// 原型这里的几条带「热」「新」徽章的编造热搜词都已移除；
+/// 私有网盘没有全站热度，改为展示本人最近上传的真实文件。
+class _RecentSection extends StatelessWidget {
+  const _RecentSection({
+    required this.stats,
+    required this.loading,
+    required this.onRetry,
+    required this.onTapFile,
   });
 
-  final String rank;
-  final bool top;
-  final String text;
-  final String? badge;
-  final bool badgeNew;
+  final QuickStats? stats;
+  final bool loading;
+  final VoidCallback onRetry;
+  final ValueChanged<RecentFile> onTapFile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 22, 18, 4),
+          child: Row(
+            children: <Widget>[
+              const Text('最近文件',
+                  style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: QyColors.heroLabel)),
+              const Spacer(),
+              QyTapScale(
+                onTap: loading ? () {} : onRetry,
+                child: const Icon(Icons.refresh, size: 16, color: QyColors.hint),
+              ),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(18, 0, 18, 8),
+          child: Text('来自你的云端文件，点击可按文件名搜索',
+              style: TextStyle(fontSize: 11, color: QyColors.hint)),
+        ),
+        if (loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )),
+          )
+        else if (stats == null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: QyTapScale(
+                onTap: onRetry,
+                child: const Text('统计加载失败，点击重试',
+                    style: TextStyle(fontSize: 11.5, color: QyColors.coral)),
+              ),
+            ),
+          )
+        else if (stats!.recentFiles.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Center(
+              child: Text('暂无文件，上传后可在此快速定位',
+                  style: TextStyle(fontSize: 11.5, color: QyColors.hint)),
+            ),
+          )
+        else
+          for (final RecentFile file in stats!.recentFiles)
+            _RecentFileRow(file: file, onTap: () => onTapFile(file)),
+      ],
+    );
+  }
+}
+
+class _RecentFileRow extends StatelessWidget {
+  const _RecentFileRow({required this.file, required this.onTap});
+
+  final RecentFile file;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final label = CloudRepository.relativeTime(file.createdAt);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: QyTapScale(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 11),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: <Widget>[
-              SizedBox(
-                width: 17,
-                child: Text(
-                  rank,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    fontStyle: FontStyle.italic,
-                    color: top ? QyColors.primary : QyColors.hint,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 11),
+              Icon(_iconFor(FileCategoryX.fromFileName(file.name)),
+                  size: 18, color: QyColors.primary),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text(text, style: const TextStyle(fontSize: 13.5, color: QyColors.ink)),
-              ),
-              if (badge != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: badgeNew ? const Color(0xFFFFEDF2) : const Color(0xFFFFF1E6),
-                    borderRadius: const BorderRadius.all(Radius.circular(5)),
-                  ),
-                  child: Text(
-                    badge!,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      color: badgeNew ? const Color(0xFFE04F7C) : const Color(0xFFE07B18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      file.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13.5, color: QyColors.ink),
                     ),
-                  ),
+                    if (label.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 2),
+                      Text(label, style: ProtoText.label105),
+                    ],
+                  ],
                 ),
+              ),
+              const Icon(Icons.chevron_right, size: 17, color: QyColors.chevron),
             ],
           ),
         ),
@@ -432,6 +509,15 @@ class _HotRow extends StatelessWidget {
   }
 }
 
+IconData _iconFor(FileCategory category) => switch (category) {
+      FileCategory.image => Icons.image_outlined,
+      FileCategory.doc => Icons.description_outlined,
+      FileCategory.video => Icons.movie_outlined,
+      FileCategory.music => Icons.audiotrack_outlined,
+      FileCategory.zip => Icons.folder_zip_outlined,
+      FileCategory.all || FileCategory.other =>
+        Icons.insert_drive_file_outlined,
+    };
 class _ResultHint extends StatelessWidget {
   const _ResultHint({
     required this.icon,

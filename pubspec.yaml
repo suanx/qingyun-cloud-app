@@ -1,5 +1,5 @@
 name: qingyun_app
-description: "轻云 · 移动端云盘 —— 基于「轻云」高保真设计稿与 qingyun_ui_kit 组件骨架构建的 Flutter 双端应用。"
+description: "轻云 · 移动端云盘 —— 基于「轻云」高保真设计稿与 qingyun_ui_kit 组件骨架构建的 Flutter Android 应用。"
 publish_to: none
 version: 0.1.12+13
 
@@ -14,14 +14,19 @@ dependencies:
   qingyun_ui_kit:
     path: packages/qingyun_ui_kit
 
-  # 路由（与 qingyun_ui_kit 的 QyRouter 骨架同版本线）
-  go_router: ^14.0.0
+  # 版本统一钉死为 Flutter 3.24.5 / Dart 3.5 已验证的下限版本，
+  # 避免 caret 约束在 CI 拉到要求更高 Dart SDK 的新版本。
+  # 路由
+  go_router: 14.0.0
 
   # 网络层（后端对接见 docs/BACKEND.md）
-  dio: ^5.4.0
+  dio: 5.4.0
 
-  # 登录凭证持久化（TokenStore；正式可升级 flutter_secure_storage）
-  shared_preferences: ^2.2.0
+  # 登录凭证加密存储（Android Keystore / iOS Keychain）
+  flutter_secure_storage: 9.0.0
+
+  # 非敏感本地数据（搜索历史等）；凭证不再存这里
+  shared_preferences: 2.2.0
 
   # 前端核心能力（锁定与 CI Flutter 3.24.5 兼容的版本，避免 ^ 拉到新 SDK 要求的版本）
   file_picker: 8.1.7
@@ -29,10 +34,22 @@ dependencies:
   open_filex: 4.6.0
   video_player: 2.9.2
 
+  # PDF 内联预览：Android 用 AndroidPdfViewer（minSdk 21），iOS 用系统 PDFKit
+  # （要求 >11.0，项目 Podfile 为 12.0，故 ios/ 文件无需改动）。
+  # 选 1.3.2 而非 1.4.x：与 Flutter 3.24.5 / AGP 8.1.0 / compileSdk 34 同期；
+  # 1.4.x 插件自身要求 AGP 8.11 + compileSdk 35，会与当前工程冲突。
+  # 其 Android 依赖发布在 JitPack，仓库声明见 android/build.gradle。
+  flutter_pdfview: 1.3.2
+
+  # 扫一扫：摄像头识别 lanflare 分享二维码 → /api/resolve-share → /api/rent 转存
+  mobile_scanner: 3.5.7
+  # Android 6+ 相机运行时权限（永久拒绝时引导到系统设置）
+  permission_handler: 11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: 4.0.0
 
 flutter:
   uses-material-design: true

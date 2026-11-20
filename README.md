@@ -1,6 +1,6 @@
 # 轻云 · 移动端云盘（qingyun-cloud-app）
 
-基于「轻云」高保真设计稿与 `qingyun_ui_kit` 组件骨架从零搭建的 **Android + iOS 双端 Flutter 应用**。一套代码双端运行，由 GitHub Actions 自动打包 APK / IPA 产物，本地无需安装打包环境。
+基于「轻云」高保真设计稿与 `qingyun_ui_kit` 组件骨架从零搭建的 **Android Flutter 应用**。由 GitHub Actions 自动打包 APK 产物，本地无需安装打包环境。
 
 ## 技术栈（与设计资料约定一致）
 
@@ -8,10 +8,10 @@
 | --- | --- | --- |
 | 框架 | Flutter stable 3.24.5 | Dart SDK `>=3.0.0 <4.0.0` |
 | 设计系统 | `packages/qingyun_ui_kit`（path 依赖） | 主题、组件、路由常量、40 个内联 SVG 图标 |
-| 路由 | `go_router ^14` | 12 个场景路由，底部四 Tab 用 `StatefulShellRoute` |
+| 路由 | `go_router ^14` | 4 个底部 Tab 用 `StatefulShellRoute`，另有 6 个独立页面 |
 | 图标 | `flutter_svg`（随 ui_kit） | SVG 以内联字符串内置，无需资源文件 |
-| 网络 | `dio ^5` | 统一 envelop 解析、Bearer 鉴权、错误映射 |
-| CI | GitHub Actions | `android-build` / `ios-build` / `release` 三条工作流 |
+| 网络 | `dio 5.4.0` | lanflare 原生 JSON、Bearer 令牌 / 会话 Cookie 鉴权、错误映射 |
+| CI | GitHub Actions | `android-build` / `release` 两条工作流，仅构建 Android APK |
 
 设计基调：纯白背景 `#FFFFFF`、钢青蓝灰主色 `#4A7386`、彩色图标体系（`QyTintedIcon` 九色族）；全局磨砂玻璃质感（`QyFrost`：背景高斯模糊 + 半透明面 + 细描边），按钮高 52、卡片圆角 20、底部导航高 84、8% 冷灰蓝柔和阴影。详见 `docs/DESIGN_SPEC.md`。
 
@@ -20,22 +20,23 @@
 ```
 qingyun-cloud-app/
 ├── android/                     # Android 宿主工程（Gradle 8.3 + AGP 8.1 + Kotlin）
-├── ios/                         # iOS 宿主工程（Runner.xcodeproj）
 ├── lib/
 │   ├── main.dart                # 入口
 │   ├── app/app.dart             # MaterialApp.router
 │   ├── core/
-│   │   ├── config/              # AppConfig（BaseUrl、mock 开关）
+│   │   ├── config/              # AppConfig（BaseUrl、超时、上传阈值）
 │   │   ├── network/             # ApiClient / ApiException / TokenStore / CloudRepository
 │   │   ├── models/              # CloudFile / StorageSummary / TransferTask
 │   │   └── router/              # go_router 路由表 + 底部导航 Shell
-│   └── features/                # 12 个场景页面（splash/home/files/transfer/…）
+│   └── features/                # 业务页面（首页 / 文件 / 传输 / 我的 / 搜索 / 预览 等）
 ├── packages/qingyun_ui_kit/     # 设计稿抽取的组件骨架（原样集成）
-├── .github/workflows/           # 双端打包工作流
+├── .github/workflows/           # Android 打包工作流
 └── docs/                        # BUILD / BACKEND / DESIGN_SPEC 文档
 ```
 
 ## 快速开始
+
+App 所有数据均来自真实后端，运行前需按 `docs/BACKEND.md` 部署 lanflare；部署到自建 VPS 后在「我的 → 设置 → 服务地址」填写域名即可（默认地址在 `AppConfig.apiBaseUrl`），无需改代码。
 
 ```bash
 git clone https://github.com/<your-account>/qingyun-cloud-app.git
@@ -44,31 +45,19 @@ flutter pub get
 flutter run                 # 真机或模拟器运行
 ```
 
-无需任何后端即可运行：默认 `AppConfig.useMockData = true`，页面使用内置示例数据。接入真实后端见 `docs/BACKEND.md`。
+启动后未登录会先进入登录页，使用 lanflare 账号登录；接口约定、鉴权与错误处理见 `docs/BACKEND.md`。
 
-## 功能演示（覆盖全部功能）
-
-App 内置「功能演示中心」（个人中心 → 功能演示，或路由 `/demo`），分组覆盖：
-
-| 分组 | 内容 | 入口 |
-| --- | --- | --- |
-| 业务场景 | 设计稿 12 场景逐项可跳转体验 | `/demo` → 对应场景路由 |
-| UI 组件 | QyButton 四态、QyCard、进度条边界值、QyListTile、QyEmptyState、Toast | `/demo/components` |
-| 网络层 | 设备内启动本地演示服务（127.0.0.1 随机端口），7 个用例：envelop 解析、Bearer 鉴权头、列表解析、业务失败、401、超时、404 | `/demo/network` |
-| 边界情况 | 空列表、超长文本、除零、负数容量、进度越界、未知枚举、字段缺失、token 生命周期，共 9 个用例 | `/demo/boundary` |
-
-每个演示用例都标注预期结果，点击即执行并展示「实际行为 + 耗时」，全部可离线运行（网络演示使用内嵌本地服务，无需外部后端）。
-
-## 双端打包（本地不装环境也可以）
+## Android 打包（本地不装环境也可以）
 
 | 方式 | 操作 | 产物 |
 | --- | --- | --- |
 | 推送 main/beta | GitHub Actions `android-build` 自动构建 | `app-release.apk`（Artifact） |
-| 推送 main/beta | GitHub Actions `ios-build` 自动构建 | 未签名 `*.ipa`（Artifact） |
-| 打 tag `v*` | `release` 工作流构建并创建 GitHub Release | APK + IPA 随 Release 附件下载 |
+| 打 tag `v*` | `release` 工作流构建并创建 GitHub Release | `app-release.apk` 随 Release 附件下载 |
 | 手动触发 | Actions 页面 `Run workflow` | 同推送 |
 
-详细说明与签名配置见 `docs/BUILD.md`。
+> `android-build` 的 Artifact 是未配置 keystore 时的 debug 签名内部测试包，**不可分发**；
+> `release` 工作流会校验 4 个签名 Secrets，只有正式签名包才会挂到 GitHub Release。
+> 发版还要求仓库提交 `pubspec.lock`。详见 `docs/BUILD.md`。
 
 ## 文档索引
 

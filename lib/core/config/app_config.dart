@@ -2,18 +2,14 @@
 abstract final class AppConfig {
   static const String appName = '轻云';
 
-  /// 应用版本号（与 pubspec.yaml 的 version 保持一致；Android/iOS 随之同步）。
+  /// 应用版本号（与 pubspec.yaml 的 version 保持一致；Android 随之同步）。
   static const String appVersion = '0.1.12';
   static const int buildNumber = 13;
   static const String versionLabel = 'v0.1.12 (build 13)';
 
   /// 后端服务基地址：lanflare（Cloudflare Workers，自定义域，国内可达）。
-  /// 登录账号密码 = lanflare 的 APP_USERNAME / APP_PASSWORD。
+  /// 具体账号与服务端密钥由后端自行管理，客户端不保存、不描述。
   static const String apiBaseUrl = 'https://lz.miro.us.ci';
-
-  /// true：使用内置示例数据展示 UI（无后端也可运行）。
-  /// false：所有页面走 [ApiClient] 请求 lanflare 后端。
-  static const bool useMockData = false;
 
   /// lanflare 未配置 STORAGE_TOTAL_BYTES 时，容量卡使用该兜底总量（GB）。
   static const double fallbackTotalGb = 100;
