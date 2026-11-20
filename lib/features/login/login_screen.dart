@@ -237,12 +237,19 @@ class _Field extends StatelessWidget {
                 border: InputBorder.none,
                 hintText: hint,
                 hintStyle: const TextStyle(fontSize: 13.5, color: QyColors.muted),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                // 必须给水平内边距：主题的胶囊填充/边框由 decoration 绘制，
+                // 只写 vertical 会让水平 padding 变 0，文字贴边像被裁切。
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 counterText: '',
+                // 后缀按钮放进输入框内部（suffixIcon），胶囊宽度与其它
+                // 输入框一致；放在 Row 里会让密码框的胶囊明显短一截。
+                suffixIcon: suffix,
+                suffixIconConstraints:
+                    const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
             ),
           ),
-          if (suffix != null) suffix!,
         ],
       ),
     );
