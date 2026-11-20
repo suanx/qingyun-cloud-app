@@ -438,7 +438,7 @@ class _Badge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: const BoxDecoration(
         color: QyColors.primaryLight,
-        borderRadius: const BorderRadius.all(Radius.circular(6)),
+        borderRadius: BorderRadius.all(Radius.circular(6)),
       ),
       child: Text(text,
           style: const TextStyle(fontSize: 10, color: QyColors.primary)),
@@ -484,7 +484,7 @@ class _ConnectionResult extends StatelessWidget {
         padding: const EdgeInsets.all(11),
         decoration: const BoxDecoration(
           color: QyColors.pinkSoft,
-          borderRadius: const BorderRadius.all(Radius.circular(10)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,7 +515,7 @@ class _ConnectionResult extends StatelessWidget {
       padding: const EdgeInsets.all(11),
       decoration: const BoxDecoration(
         color: QyColors.mintSoft,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
+        borderRadius: BorderRadius.all(Radius.circular(10)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

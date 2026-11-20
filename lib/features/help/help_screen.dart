@@ -590,7 +590,7 @@ class _FeedbackTile extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               decoration: const BoxDecoration(
                 color: QyColors.mintSoft,
-                borderRadius: const BorderRadius.all(Radius.circular(9)),
+                borderRadius: BorderRadius.all(Radius.circular(9)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

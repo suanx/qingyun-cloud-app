@@ -131,7 +131,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
               padding: const EdgeInsets.all(10),
               decoration: const BoxDecoration(
                 color: QyColors.canvas,
-                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                borderRadius: BorderRadius.all(Radius.circular(8)),
               ),
               child: SelectableText(
                 token,

@@ -505,7 +505,7 @@ class _StorageBar extends StatelessWidget {
     if (data == null || data.totalGb <= 0) {
       // 加载中 / 失败：整条中性 track，与容量环 ratio=0 的表现一致。
       return <Widget>[
-        const Expanded(child: const ColoredBox(color: QyColors.track)),
+        const Expanded(child: ColoredBox(color: QyColors.track)),
       ];
     }
     final StorageCategoryStats c = data.byCategory;

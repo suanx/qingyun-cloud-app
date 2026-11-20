@@ -319,8 +319,8 @@ class _Player extends StatelessWidget {
           height: 320,
           decoration: const BoxDecoration(
             color: QyColors.sky,
-            borderRadius: const BorderRadius.all(Radius.circular(18)),
-            boxShadow: const <BoxShadow>[
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+            boxShadow: <BoxShadow>[
               BoxShadow(
                   color: Color(0x1A2F6BFF),
                   blurRadius: 22,

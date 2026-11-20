@@ -13,7 +13,7 @@ abstract final class TokenStore {
   static const String _key = 'lanflare_credential';
   static const String _tokenIdKey = 'lanflare_api_token_id';
 
-  static final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   static String? _credential;
   static String? _tokenId;

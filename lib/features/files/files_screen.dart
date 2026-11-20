@@ -990,8 +990,8 @@ class _SelectionBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: const BoxDecoration(
         color: QyColors.surface,
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-        boxShadow: const <BoxShadow>[
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+        boxShadow: <BoxShadow>[
           BoxShadow(color: Color(0x1A1F4899), blurRadius: 16, offset: Offset(0, 4)),
         ],
       ),

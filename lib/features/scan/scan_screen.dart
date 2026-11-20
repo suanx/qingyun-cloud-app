@@ -632,7 +632,7 @@ class _ErrorCard extends StatelessWidget {
       padding: const EdgeInsets.all(13),
       decoration: const BoxDecoration(
         color: QyColors.pinkSoft,
-        borderRadius: const BorderRadius.all(Radius.circular(14)),
+        borderRadius: BorderRadius.all(Radius.circular(14)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -699,7 +699,7 @@ class _BlockerCard extends StatelessWidget {
       padding: const EdgeInsets.all(15),
       decoration: const BoxDecoration(
         color: QyColors.amberSoft,
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
