@@ -270,7 +270,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
           children: <Widget>[
             ProtoNav(
               title: '登录设备',
-              subtitle: '后端 /api/tokens · ${TokenStore.tokenId == null ? '会话模式' : '令牌模式'}',
+              subtitle: '管理登录设备与访问令牌',
               leading: ProtoIconButton(
                 icon: Icons.arrow_back,
                 onTap: () => context.pop(),
@@ -375,8 +375,8 @@ class _InfoCard extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            '每次 App 登录会签发一个 API 令牌。创建时间≈登录时间，最后活跃≈最近请求时间；'
-            '吊销后该凭证立即失效，对应设备会被踢回登录页。服务端只保存哈希，不会下发完整令牌。',
+            '每次在 App 登录都会生成一个登录凭证。创建时间即登录时间，最后活跃即最近使用时间；'
+            '吊销后该凭证立即失效，对应设备需要重新登录。完整令牌只在创建时显示一次，请妥善保存。',
             style: TextStyle(fontSize: 11.5, color: QyColors.muted, height: 1.5),
           ),
         ],

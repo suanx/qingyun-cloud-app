@@ -175,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: <Widget>[
                       _StorageCard(
                         summary: _summary,
-                        onTap: () => context.go(QyRoutes.storage),
+                        onTap: () => context.push(QyRoutes.storage),
                         onUpgrade: _openMembership,
                       ),
                       _QuickGrid(
@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _RecentRow(
                         files: _recent,
                         onTap: (CloudFile file) =>
-                            context.go(QyRoutes.preview, extra: file),
+                            context.push(QyRoutes.preview, extra: file),
                       ),
                       const ProtoSectionHead(
                         title: '为你推荐',
@@ -200,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         recall: _recall,
                         loading: _recallLoading,
                         failed: _recallFailed,
-                        onTap: () => context.go(QyRoutes.album),
+                        onTap: () => context.push(QyRoutes.album),
                       ),
                     ],
                   ),
@@ -292,7 +292,7 @@ class _HeroContent extends StatelessWidget {
           ProtoIconButton(
             icon: Icons.search,
             glass: true,
-            onTap: () => context.go(QyRoutes.search),
+            onTap: () => context.push(QyRoutes.search),
           ),
           const SizedBox(width: 8),
           // 扫码转存会写入 VFS，普通用户为只读：入口直接不渲染，避免点了拿 403。
@@ -613,7 +613,7 @@ class _QuickGrid extends StatelessWidget {
             iconColor: QyColors.violetDeep,
             background: QyColors.violetSoft,
             label: '回收站',
-            onTap: () => context.go(QyRoutes.trash),
+            onTap: () => context.push(QyRoutes.trash),
           ),
         ],
       ),

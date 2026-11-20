@@ -611,7 +611,7 @@ class _FilesScreenState extends State<FilesScreen> {
     if (file.isDir) {
       _openFolder(file);
     } else {
-      context.go(QyRoutes.preview, extra: file);
+      context.push(QyRoutes.preview, extra: file);
     }
   }
 
@@ -742,7 +742,7 @@ class _FilesScreenState extends State<FilesScreen> {
                     : <Widget>[
                         ProtoIconButton(
                           icon: Icons.search,
-                          onTap: () => context.go(QyRoutes.search),
+                          onTap: () => context.push(QyRoutes.search),
                         ),
                         ProtoIconButton(
                           icon: Icons.sort,

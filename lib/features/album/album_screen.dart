@@ -78,7 +78,13 @@ class _AlbumScreenState extends State<AlbumScreen> {
             subtitle: '云端图片 · 点击进入在线查看',
             leading: ProtoIconButton(
               icon: Icons.arrow_back,
-              onTap: () => context.go(QyRoutes.files),
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(QyRoutes.files);
+                }
+              },
             ),
           ),
           _MemoryBanner(
@@ -271,7 +277,7 @@ class _Photo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return QyTapScale(
-      onTap: () => context.go(QyRoutes.preview, extra: file),
+      onTap: () => context.push(QyRoutes.preview, extra: file),
       child: Container(
         height: 118,
         decoration: BoxDecoration(

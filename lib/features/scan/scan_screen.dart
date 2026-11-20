@@ -581,7 +581,7 @@ class _ManualCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            '支持 lanflare:// 完整码、/s/ 分享链接、蓝奏云原生分享链接'
+            '支持分享码、分享链接、蓝奏云原生分享链接'
             '（https://…lanzou.com/i… 或 /b…），以及带「提取码：xxxx」的说明文字。',
             style: TextStyle(fontSize: 10.5, height: 1.4, color: QyColors.muted),
           ),

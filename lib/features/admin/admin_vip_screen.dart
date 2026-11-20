@@ -264,7 +264,7 @@ class _AdminVipScreenState extends State<AdminVipScreen> {
 
   Widget _nav(BuildContext context) => ProtoNav(
         title: '会员管理',
-        subtitle: '仅管理员 · 后端 /api/admin/users',
+        subtitle: '仅管理员可见',
         leading: ProtoIconButton(
           icon: Icons.arrow_back,
           onTap: () => context.pop(true),
@@ -297,7 +297,7 @@ class _HintCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: 8),
-          Text('直接调用 lanflare 的 admin 接口设置天数，不接支付渠道；'
+          Text('管理员可直接为用户设置会员天数（不经过支付）；'
               '正数在现有到期时间上累加，取消会员后可以随时重新设置。',
               style: TextStyle(fontSize: 11.5, color: QyColors.muted, height: 1.5)),
         ],

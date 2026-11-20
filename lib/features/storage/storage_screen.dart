@@ -179,7 +179,13 @@ class _StorageScreenState extends State<StorageScreen> {
             title: '存储空间',
             leading: ProtoIconButton(
               icon: Icons.arrow_back,
-              onTap: () => context.go(QyRoutes.profile),
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(QyRoutes.profile);
+                }
+              },
             ),
             actions: <Widget>[
               QyTapScale(

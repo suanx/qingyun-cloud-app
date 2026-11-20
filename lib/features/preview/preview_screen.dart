@@ -36,6 +36,10 @@ class _PreviewScreenState extends State<PreviewScreen> {
   VideoPlayerController? _video;
   String? _textContent;
   String? _error;
+  // 媒体/文本的实际加载错误：与「格式不支持」严格区分，失败时如实展示
+  // 原因并提供重试/下载，不再掉进 _Unsupported 假装格式不支持。
+  String? _mediaError;
+  String? _textError;
   String? _title;
   bool _loading = true;
 
@@ -64,6 +68,16 @@ class _PreviewScreenState extends State<PreviewScreen> {
   }
 
   Future<void> _load() async {
+    if (mounted && !_loading) {
+      // 重试入口：先回到加载态并清掉上一轮的错误。
+      setState(() {
+        _loading = true;
+        _error = null;
+        _mediaError = null;
+        _textError = null;
+        _textContent = null;
+      });
+    }
     try {
       // 换取短期签名 URL：<img>/<video> 无法附加 Authorization 头，
       // 因此由后端签发 HMAC 能力 URL（见 docs/BACKEND.md）。
@@ -105,7 +119,10 @@ class _PreviewScreenState extends State<PreviewScreen> {
       await controller.play();
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'preview_screen#1');
-      // 播放器初始化失败时保留降级卡片，用户仍可下载后用系统播放器查看。
+      // 播放器初始化失败：如实记录错误，界面展示原因 + 重试/下载，
+      // 不再掉进「格式不支持」的兜底卡片误导用户。
+      if (!mounted) return;
+      setState(() => _mediaError = error.toString());
     }
   }
 
@@ -116,7 +133,8 @@ class _PreviewScreenState extends State<PreviewScreen> {
       setState(() => _textContent = response.data ?? '');
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'preview_screen#2');
-      // 文本拉取失败不阻塞其他操作，展示下载入口即可。
+      if (!mounted) return;
+      setState(() => _textError = error.toString());
     }
   }
 
@@ -233,7 +251,13 @@ class _PreviewScreenState extends State<PreviewScreen> {
                   ProtoIconButton(
                     icon: Icons.arrow_back,
                     color: const Color(0xFFDDE3EE),
-                    onTap: () => context.pop(),
+                    onTap: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go(QyRoutes.files);
+                      }
+                    },
                   ),
                   Expanded(
                     child: Text(
@@ -337,12 +361,30 @@ class _PreviewScreenState extends State<PreviewScreen> {
                 child: CircularProgressIndicator(color: QyColors.onDark),
               );
             },
-            errorBuilder: (_, __, ___) => const _Unsupported(
-              icon: Icons.broken_image_outlined,
-              hint: '图片加载失败，可尝试下载查看',
+            errorBuilder: (_, __, ___) => _PreviewError(
+              title: '图片加载失败',
+              detail: '可能是网络不稳定或服务暂时不可用',
+              onRetry: _load,
+              onDownload: _download,
             ),
           ),
         ),
+      );
+    }
+    if ((info.isVideo || info.isAudio) && _mediaError != null) {
+      return _PreviewError(
+        title: '媒体加载失败',
+        detail: _mediaError,
+        onRetry: _load,
+        onDownload: _download,
+      );
+    }
+    if (info.isText && _textError != null) {
+      return _PreviewError(
+        title: '文本加载失败',
+        detail: _textError,
+        onRetry: _load,
+        onDownload: _download,
       );
     }
     final VideoPlayerController? video = _video;
@@ -724,6 +766,77 @@ class _PlayerControls extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// 加载失败卡片（深色预览页）：如实展示失败原因并提供重试/下载，
+/// 与「格式不支持」的 _Unsupported 严格区分，避免误导。
+class _PreviewError extends StatelessWidget {
+  const _PreviewError({
+    required this.title,
+    required this.onRetry,
+    required this.onDownload,
+    this.detail,
+  });
+
+  final String title;
+  final String? detail;
+  final VoidCallback onRetry;
+  final VoidCallback onDownload;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.cloud_off_outlined,
+                size: 56, color: Color(0xAAFFFFFF)),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              style: const TextStyle(
+                  fontSize: 13.5, color: Color(0xFFE6EAF2)),
+            ),
+            if (detail != null && detail!.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                detail!,
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF8D99AD)),
+              ),
+            ],
+            const SizedBox(height: 18),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                OutlinedButton(
+                  onPressed: onRetry,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0x66FFFFFF)),
+                  ),
+                  child: const Text('重试'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  onPressed: onDownload,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0x66FFFFFF)),
+                  ),
+                  child: const Text('下载后打开'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

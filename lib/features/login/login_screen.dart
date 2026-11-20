@@ -110,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 18),
             Text('欢迎回来', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 6),
-            Text('登录 lanflare 账号，你的文件随时在云上',
+            Text('登录你的账号，文件随时在云上',
                 style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 28),
             QyCard(
@@ -178,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 18),
             const ProtoFootNote(
-              '没有账号？在 lanflare 网页端注册后使用同一账号登录',
+              '没有账号？在网页端注册后使用同一账号登录',
               padding: EdgeInsets.zero,
             ),
           ],

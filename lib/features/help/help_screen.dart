@@ -27,9 +27,9 @@ class _Faq {
 
 const List<_Faq> _faqs = <_Faq>[
   _Faq(
-    '上传或下载提示「请先绑定存储账号」',
-    'App 登录账号和蓝奏云存储账号是两个账号。到「存储空间 → 管理」绑定存储账号后，'
-        '上传、下载、删除、清理才会真正生效。绑定状态与连通性都在该页实时检测。',
+    '上传或下载提示存储不可用',
+    '存储由管理员统一配置，普通账号无需绑定任何账号即可上传、下载。'
+        '如持续提示存储不可用，请联系管理员检查存储配置。',
   ),
   _Faq(
     '登录时要求输入 6 位验证码',
@@ -43,18 +43,12 @@ const List<_Faq> _faqs = <_Faq>[
   ),
   _Faq(
     '大文件上传会失败吗',
-    '超过 90MB 的文件由 App 自动按 8MB 分块串行上传，最后一格完成后入库。'
-        '自建 VPS 需保证服务端临时目录可写，切块期间请勿退出页面。',
+    '超过 90MB 的文件由 App 自动按 8MB 分块串行上传，最后一块完成后入库。'
+        '切块期间请勿退出页面。',
   ),
   _Faq(
-    '换绑了另一个存储账号，旧文件呢',
-    '旧的文件记录仍指向原来的存储账号，不会自动迁移。绑定页会显示真实的活跃文件数，'
-        '并在重新绑定时明确提示这一点。',
-  ),
-  _Faq(
-    '怎么连接自己部署的服务',
-    '在「设置 → 服务地址」填完整域名并保存，先用「测试连接」确认返回的是 lanflare，'
-        '再退出登录重新登录新服务。原服务的凭证在新服务上不可用。',
+    '需要手动设置服务地址吗',
+    '不需要。当前版本已内置服务地址，登录账号即可使用。',
   ),
   _Faq(
     '提交反馈后谁会看到',
@@ -231,7 +225,7 @@ class _HelpScreenState extends State<HelpScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  const Text('告诉我们遇到的问题或想要的功能，内容会保存到服务端。',
+                  const Text('告诉我们遇到的问题或想要的功能。',
                       style: TextStyle(fontSize: 11, color: QyColors.muted)),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<FeedbackCategory>(
@@ -357,7 +351,7 @@ class _HelpScreenState extends State<HelpScreen> {
                 ),
             ],
             const ProtoFootNote(
-              '反馈保存在你部署的服务端，不经过第三方',
+              '反馈仅你本人和管理员可见，不经过第三方',
               padding: EdgeInsets.fromLTRB(0, 20, 0, 10),
             ),
           ],

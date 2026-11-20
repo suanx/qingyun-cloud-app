@@ -339,7 +339,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           children: <Widget>[
             ProtoNav(
               title: '安全中心',
-              subtitle: '后端 /api/security/2fa · /api/tokens',
+              subtitle: '密码 · 两步验证 · 登录设备',
               leading: ProtoIconButton(
                 icon: Icons.arrow_back,
                 onTap: () => context.pop(),

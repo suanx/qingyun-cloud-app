@@ -209,7 +209,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   : (_stats == null
                       ? ' 个文件 · 统计不可用'
                       : ' 个文件 · 查看全部图片'),
-              onTap: () => context.go(QyRoutes.album),
+              onTap: () => context.push(QyRoutes.album),
             ),
             _ResultHint(
               icon: Icons.description,
@@ -319,7 +319,7 @@ class _ResultList extends StatelessWidget {
           children: <Widget>[
             for (final file in files)
               QyTapScale(
-                onTap: () => context.go(QyRoutes.preview, extra: file),
+                onTap: () => context.push(QyRoutes.preview, extra: file),
                 child: Container(
                   decoration: const BoxDecoration(
                     border: Border(top: BorderSide(color: QyColors.divider)),

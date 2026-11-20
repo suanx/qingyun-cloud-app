@@ -63,10 +63,16 @@ class _SharesScreenState extends State<SharesScreen> {
         children: <Widget>[
           ProtoNav(
             title: '我的分享',
-            subtitle: '后端 /api/my-shares',
+            subtitle: '管理我创建的分享链接',
             leading: ProtoIconButton(
               icon: Icons.arrow_back,
-              onTap: () => context.go(QyRoutes.profile),
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(QyRoutes.profile);
+                }
+              },
             ),
           ),
           FutureBuilder<List<ShareItem>>(
