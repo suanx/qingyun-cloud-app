@@ -17,6 +17,12 @@ abstract final class AppConfig {
   /// lanflare 单请求上传上限（与 Worker 端 MAX_UPLOAD_BYTES 一致）。
   static const int maxUploadBytes = 90 * 1024 * 1024;
 
+  /// 直传 / 分块的分界：不超过此大小走单请求直传，更大的文件自动分块。
+  /// 直传要把一条连接保持到存储端收完整个文件，大文件在弱网或存储端
+  /// 限速时连接中途断开就整文件失败（实测 50MB 直传必挂）；分块每块
+  /// 独立请求、失败只重发当前块，可靠得多。
+  static const int directUploadMaxBytes = 8 * 1024 * 1024;
+
   /// 是否启用设计稿字体（Noto Sans SC / Outfit）。
   /// 需要先在 pubspec.yaml 声明字体资源，详见 docs/BUILD.md。
   static const bool useDesignFonts = false;

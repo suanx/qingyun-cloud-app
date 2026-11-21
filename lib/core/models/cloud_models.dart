@@ -229,6 +229,7 @@ class TransferTask {
     required this.status,
     required this.progress,
     required this.sizeLabel,
+    this.errorMessage,
   });
 
   final String id;
@@ -238,13 +239,23 @@ class TransferTask {
   final double progress;
   final String sizeLabel;
 
-  TransferTask copyWith({TransferStatus? status, double? progress}) => TransferTask(
+  /// 失败原因（仅 failed 时有值）：如实展示给用户，避免只看到「传输失败」
+  /// 四个字盲目重试。旧持久化记录没有该字段时为 null。
+  final String? errorMessage;
+
+  TransferTask copyWith({
+    TransferStatus? status,
+    double? progress,
+    String? errorMessage,
+  }) =>
+      TransferTask(
         id: id,
         name: name,
         direction: direction,
         status: status ?? this.status,
         progress: progress ?? this.progress,
         sizeLabel: sizeLabel,
+        errorMessage: errorMessage ?? this.errorMessage,
       );
 
   static TransferTask fromJson(Map<String, dynamic> json) => TransferTask(
@@ -259,6 +270,7 @@ class TransferTask {
         ),
         progress: JsonUtils.asDouble(json['progress']).clamp(0.0, 1.0),
         sizeLabel: json['size_label']?.toString() ?? '',
+        errorMessage: json['error']?.toString(),
       );
 
   /// 与 [fromJson] 对称，用于 `LocalTransferStore` 持久化已结束的传输记录。
@@ -269,6 +281,7 @@ class TransferTask {
         'status': status.name,
         'progress': progress,
         'size_label': sizeLabel,
+        if (errorMessage != null) 'error': errorMessage,
       };
 }
 

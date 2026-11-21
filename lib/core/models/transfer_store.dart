@@ -198,7 +198,9 @@ class LocalTransferStore extends ChangeNotifier {
   }
 
   /// 失败后**保留** runtime：用户点「重试」时仍能真正重新发起请求。
-  void fail(String id) => _setStatus(id, TransferStatus.failed);
+  /// [message] 是给用户看的失败原因（来自接口错误），会随记录落盘。
+  void fail(String id, [String? message]) =>
+      _setStatus(id, TransferStatus.failed, null, message);
 
   /// 暂停：先把状态落地为 paused，再真正取消底层 HTTP 请求。
   ///
@@ -267,10 +269,12 @@ class LocalTransferStore extends ChangeNotifier {
     return count;
   }
 
-  void _setStatus(String id, TransferStatus status, [double? progress]) {
+  void _setStatus(String id, TransferStatus status,
+      [double? progress, String? errorMessage]) {
     final index = _indexFor(id);
     if (index < 0) return;
-    _tasks[index] = _tasks[index].copyWith(status: status, progress: progress);
+    _tasks[index] = _tasks[index].copyWith(
+        status: status, progress: progress, errorMessage: errorMessage);
     notifyListeners();
     if (status == TransferStatus.done || status == TransferStatus.failed) {
       _schedulePersist();

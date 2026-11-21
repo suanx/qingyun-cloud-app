@@ -201,6 +201,11 @@ class ApiClient {
               Headers.contentLengthHeader: length,
             },
             contentType: 'application/octet-stream',
+            // 上传不能用全局 30 秒接收超时：请求体发完后，服务端还要把
+            // 数据转发到存储端才返回，慢的时候远超 30 秒，客户端会把
+            // 本可成功的上传误杀成「传输失败」。发送同理放宽。
+            sendTimeout: const Duration(minutes: 10),
+            receiveTimeout: const Duration(minutes: 5),
           ),
           onSendProgress: onSendProgress,
           cancelToken: cancelToken,

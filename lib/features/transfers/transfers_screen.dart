@@ -230,6 +230,19 @@ class _TransferCard extends StatelessWidget {
                     Text(task.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: ProtoText.name135),
                     const SizedBox(height: 3),
                     Text('${task.sizeLabel.isEmpty ? '' : '${task.sizeLabel} · '}$statusMeta', style: ProtoText.label105),
+                    // 失败时如实展示原因（接口返回的错误消息），不再只有
+                    // 「传输失败」四个字让用户盲目重试。
+                    if (task.status == TransferStatus.failed &&
+                        (task.errorMessage ?? '').isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 3),
+                      Text(
+                        task.errorMessage!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 10.5, color: QyColors.error),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -274,23 +287,47 @@ class _TransferCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 11),
+          // 进度条：轨道 + 填充。旧实现用 FractionallySizedBox 包无子
+          // DecoratedBox，实机上填充层不绘制（只剩百分比文字）；这里用
+          // LayoutBuilder 取真实宽度画填充，轨道也一并画出，进度可读。
           ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(3)),
             child: SizedBox(
               height: 5,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: task.progress.clamp(0.0, 1.0),
-                  child: const DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(3)),
-                      gradient: LinearGradient(
-                        colors: <Color>[Color(0xFF4C8DFF), QyColors.mint],
-                      ),
-                    ),
+              child: Stack(
+                children: <Widget>[
+                  const Positioned.fill(
+                    child: ColoredBox(color: QyColors.primaryLight),
                   ),
-                ),
+                  LayoutBuilder(
+                    builder:
+                        (BuildContext context, BoxConstraints constraints) {
+                      final double fillWidth = constraints.maxWidth *
+                          task.progress.clamp(0.0, 1.0);
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          width: fillWidth,
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(3)),
+                            color: task.status == TransferStatus.failed
+                                ? QyColors.error
+                                : null,
+                            gradient: task.status == TransferStatus.failed
+                                ? null
+                                : const LinearGradient(
+                                    colors: <Color>[
+                                      Color(0xFF4C8DFF),
+                                      QyColors.mint,
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ),

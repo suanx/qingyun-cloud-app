@@ -699,7 +699,7 @@ class CloudRepository {
   }
 
   /// 上传文件（lanflare `POST /api/upload?pid=`，raw body + `X-Heri-Name` 头）。
-  /// 单请求上限 90MB；进度写入本地任务模型。
+  /// 单请求直传（仅小文件，见 [AppConfig.directUploadMaxBytes]）；进度写入本地任务模型。
   ///
   /// [taskId] 必须由 [uploadPath] 提供——只有那条链路注册了真实的
   /// CancelToken 与重发闭包，单独调用会产生「暂停点了没反应」的假能力。
@@ -737,13 +737,23 @@ class CloudRepository {
     } on ApiException catch (error) {
       // 用户主动暂停：store.pause 已把状态设为 paused 并取消了请求，
       // 这里不能覆盖成 failed，也不落盘。
-      if (!error.isCancelled) LocalTransferStore.instance.fail(taskId);
+      if (!error.isCancelled) {
+        LocalTransferStore.instance
+            .fail(taskId, _transferFailMessage(error, '上传'));
+      }
       rethrow;
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'cloud_repository#1');
-      LocalTransferStore.instance.fail(taskId);
+      LocalTransferStore.instance
+          .fail(taskId, _transferFailMessage(error, '上传'));
       rethrow;
     }
+  }
+
+  /// 传输失败时给用户看的原因：接口错误自带可读消息，其余归为网络异常。
+  static String _transferFailMessage(Object error, String action) {
+    if (error is ApiException) return error.message;
+    return '$action失败：网络或服务异常，请重试';
   }
 
   /// 在线预览：换取短期签名 URL（`GET /api/preview/url`）。
@@ -917,11 +927,15 @@ class CloudRepository {
       LocalTransferStore.instance.complete(taskId);
       return savePath;
     } on ApiException catch (error) {
-      if (!error.isCancelled) LocalTransferStore.instance.fail(taskId);
+      if (!error.isCancelled) {
+        LocalTransferStore.instance
+            .fail(taskId, _transferFailMessage(error, '下载'));
+      }
       rethrow;
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'cloud_repository#2');
-      LocalTransferStore.instance.fail(taskId);
+      LocalTransferStore.instance
+          .fail(taskId, _transferFailMessage(error, '下载'));
       rethrow;
     }
   }
@@ -965,7 +979,8 @@ class CloudRepository {
     return cleaned.isEmpty ? 'download.bin' : cleaned;
   }
 
-  /// 从本地路径上传：≤90MB 走单请求，>90MB 自动分块（8MB/块）。
+  /// 从本地路径上传：≤8MB 走单请求直传，更大的文件自动分块（8MB/块），
+  /// 避免大文件直传时整条连接中途断开导致整文件失败。
   ///
   /// [reuseTaskId] 由重试闭包传入，复用同一条任务记录重新从头上传。
   /// 源路径只保留在**内存中的重发闭包**里，不落盘；重启后的历史记录
@@ -1009,7 +1024,7 @@ class CloudRepository {
       ),
     );
 
-    if (length <= AppConfig.maxUploadBytes) {
+    if (length <= AppConfig.directUploadMaxBytes) {
       return upload(
         name: name,
         bytes: file.openRead().map((List<int> b) => Uint8List.fromList(b)),
@@ -1083,24 +1098,34 @@ class CloudRepository {
           'X-Heri-File-Size': '$length',
           if (i == total - 1) 'X-Heri-Finalize': '1',
         };
-        final data = _mapOf(
-          await _client.uploadStream(
-            '/api/upload/chunk?pid=$pid',
-            body: file.openRead(start, end)
-                .map((List<int> b) => Uint8List.fromList(b)),
-            length: end - start,
-            headers: headers,
-            cancelToken: cancelToken,
-            onSendProgress: (int chunkSent, int _) {
-              final double ratio = (sent + chunkSent) / length;
-              LocalTransferStore.instance.updateProgress(
-                taskId,
-                ratio > 0.99 ? 0.99 : ratio,
-              );
-            },
-          ),
-          '/api/upload/chunk',
-        );
+        Future<Map<String, dynamic>> sendChunk() async => _mapOf(
+              await _client.uploadStream(
+                '/api/upload/chunk?pid=$pid',
+                body: file
+                    .openRead(start, end)
+                    .map((List<int> b) => Uint8List.fromList(b)),
+                length: end - start,
+                headers: headers,
+                cancelToken: cancelToken,
+                onSendProgress: (int chunkSent, int _) {
+                  final double ratio = (sent + chunkSent) / length;
+                  LocalTransferStore.instance.updateProgress(
+                    taskId,
+                    ratio > 0.99 ? 0.99 : ratio,
+                  );
+                },
+              ),
+              '/api/upload/chunk',
+            );
+        Map<String, dynamic> data;
+        try {
+          data = await sendChunk();
+        } on ApiException catch (e) {
+          if (e.isCancelled) rethrow;
+          // 单块抖动自动重试一次：同一 uploadId + 块序号在服务端按序号
+          // 幂等覆盖，不会产生重复数据；避免整文件因一块失败从头再来。
+          data = await sendChunk();
+        }
         sent = end;
         lastData = data;
       }
@@ -1113,12 +1138,16 @@ class CloudRepository {
     } on ApiException catch (error) {
       // 暂停：请求已取消，状态由 store.pause 落地为 paused；仍要 abort，
       // 清掉云端 .chunk-<uploadId> 残留目录（后端 abort 幂等且有护栏）。
-      if (!error.isCancelled) LocalTransferStore.instance.fail(taskId);
+      if (!error.isCancelled) {
+        LocalTransferStore.instance
+            .fail(taskId, _transferFailMessage(error, '上传'));
+      }
       unawaited(_abortChunkUpload(uploadId));
       rethrow;
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'cloud_repository#3');
-      LocalTransferStore.instance.fail(taskId);
+      LocalTransferStore.instance
+          .fail(taskId, _transferFailMessage(error, '上传'));
       unawaited(_abortChunkUpload(uploadId));
       rethrow;
     }
